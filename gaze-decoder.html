@@ -1,0 +1,1214 @@
+<meta charset="utf-8">
+<title>Gaze Decoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed first-person room; observer layer (zones, tags, feed) floats over it; report is a drawing-sheet overlay. */
+:root{
+  --paper:#EDECE8;      /* model board */
+  --ink:#1D1E1C;        /* drawing ink */
+  --mute:#6E6D67;       /* secondary annotation */
+  --rule:#CDCAC2;       /* hairlines */
+  --glass:rgba(247,246,243,.9);
+  --signal:#3651C9;     /* the machine's layer: what the app sees */
+  --signal-soft:rgba(54,81,201,.12);
+  --warm:#9A5B2E;       /* negative sentiment / caution */
+  --f-ui:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#scene.drag{cursor:grabbing}
+.cross{position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;pointer-events:none}
+.cross::before,.cross::after{content:"";position:absolute;background:var(--ink);opacity:.55}
+.cross::before{left:6px;top:0;width:2px;height:14px}
+.cross::after{top:6px;left:0;height:2px;width:14px}
+body.locked .cross::before,body.locked .cross::after{background:var(--signal);opacity:1}
+
+/* top bar */
+.top{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none;z-index:5}
+.top>*{pointer-events:auto}
+.brand{display:flex;flex-direction:column;gap:3px}
+.brand b{font-stretch:125%;font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.brand span{font-size:12px;color:var(--mute)}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.seg{display:flex;border:1px solid var(--ink);background:var(--glass)}
+.seg button{border:0;background:transparent;padding:7px 11px;font-size:12px;font-weight:500;letter-spacing:.02em}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.btn{border:1px solid var(--ink);background:var(--glass);padding:7px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.signal{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.logbtn{display:none}
+
+/* floating tags */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2}
+.tag{position:absolute;transform:translate(-50%,-100%);font-family:var(--f-mono);font-size:11px;line-height:1.35;background:var(--glass);border:1px solid var(--signal);color:var(--ink);padding:4px 7px;white-space:nowrap}
+.tag::after{content:"";position:absolute;left:50%;bottom:-9px;width:1px;height:8px;background:var(--signal)}
+.tag b{color:var(--signal);font-weight:500}
+.tag.hot{background:var(--signal);color:#fff}
+.tag.hot b{color:#fff}
+
+/* observer panel */
+#panel{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 70px);bottom:calc(env(safe-area-inset-bottom,0px) + 82px);width:316px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--rule);display:flex;flex-direction:column;z-index:4;overflow:hidden}
+.ph{padding:12px 14px 10px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ph h2,.sec h3{margin:0;font-stretch:125%;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.rec{font-family:var(--f-mono);font-size:11px;color:var(--signal);display:flex;align-items:center;gap:6px}
+.rec::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--signal);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+.pbody{overflow:auto;flex:1;min-height:0}
+.sec{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px}
+.now{font-family:var(--f-mono);font-size:12px;display:flex;flex-direction:column;gap:2px}
+.now .k{color:var(--mute)}
+.meta{display:grid;grid-template-columns:78px 1fr;gap:3px 8px;font-size:11.5px}
+.meta dt{color:var(--mute);font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+.meta dd{margin:0}
+.objrow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:12px;padding:6px 0;border-top:1px dashed var(--rule)}
+.objrow:first-of-type{border-top:0}
+.objrow .n{font-weight:600}
+.objrow .n i{font-style:normal;font-family:var(--f-mono);font-weight:400;color:var(--mute);font-size:11px;margin-right:6px}
+.objrow .v{font-family:var(--f-mono);font-size:11px;color:var(--mute);grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}
+.objrow .v b{color:var(--ink);font-weight:500}
+.objrow.in .n{color:var(--signal)}
+#plan{width:100%;height:150px;display:block}
+#feed{list-style:none;margin:0;padding:0;font-size:11.5px;display:flex;flex-direction:column}
+#feed li{display:grid;grid-template-columns:44px 1fr;gap:8px;padding:5px 0;border-top:1px dashed var(--rule)}
+#feed li:first-child{border-top:0}
+#feed .t{font-family:var(--f-mono);color:var(--mute);font-size:10.5px;padding-top:1px}
+#feed li.capture .m{color:var(--signal);font-weight:600}
+#feed li.note .m{font-style:italic}
+.empty{color:var(--mute);font-size:12px}
+
+/* note bar */
+#notebar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);width:min(660px,calc(100% - 32px));display:flex;gap:8px;z-index:6}
+#notebar .field{flex:1;min-width:0;display:flex;align-items:center;background:var(--glass);border:1px solid var(--ink);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#note{flex:1;min-width:0;border:0;background:transparent;padding:11px 12px;font-size:14px;outline:none}
+#note::placeholder{color:var(--mute)}
+#mic{border:0;border-left:1px solid var(--rule);background:transparent;padding:0 12px;align-self:stretch;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+#mic svg{width:15px;height:15px}
+#mic.on{background:var(--signal);color:#fff}
+#notebar .btn{padding:0 16px}
+
+/* glass selector widget */
+#glassw{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 74px);width:236px;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--ink);z-index:6;display:flex;flex-direction:column}
+#glassw .gh{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px 6px;border-bottom:1px solid var(--rule)}
+#glassw .gh b{font-stretch:125%;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase}
+#glassw .gh span{font-family:var(--f-mono);font-size:10px;color:var(--mute)}
+.gbtn{display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;text-align:left;border:0;border-top:1px dashed var(--rule);background:transparent;padding:7px 10px}
+.gbtn:first-of-type{border-top:0}
+.gbtn .gn{font-size:12.5px;font-weight:600}
+.gbtn .gv{font-family:var(--f-mono);font-size:12px}
+.gbtn .gbar{grid-column:1/-1;height:4px;background:var(--rule);position:relative}
+.gbtn .gbar i{position:absolute;inset:0 auto 0 0;background:var(--mute)}
+.gbtn[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.gbtn[aria-pressed="true"] .gbar{background:rgba(255,255,255,.2)}
+.gbtn[aria-pressed="true"] .gbar i{background:#F2C14E}
+.gbtn kbd{font-family:var(--f-mono);font-size:10px;opacity:.6;margin-left:4px}
+.heatkey{height:6px;background:linear-gradient(90deg,#3651C9,#26BFD9,#FAD940,#EB4026);margin-top:2px}
+.heatlab{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--mute)}
+#notes{list-style:none;margin:0;padding:0;font-size:12px;display:flex;flex-direction:column}
+#notes li{padding:6px 0;border-top:1px dashed var(--rule);display:flex;flex-direction:column;gap:2px}
+#notes li:first-child{border-top:0}
+#notes .q{font-style:italic}
+#notes .w{font-family:var(--f-mono);font-size:10.5px;color:var(--mute)}
+#notes .pos{color:var(--signal)}#notes .neg{color:var(--warm)}
+.ncount{font-family:var(--f-mono);font-size:11px;background:var(--ink);color:var(--paper);padding:0 6px;margin-right:4px;align-self:center}
+@media (max-width:860px){#glassw{width:auto;right:max(16px,env(safe-area-inset-right,0px));flex-direction:row;flex-wrap:wrap}#glassw .gh{width:100%}#glassw .gbtn{flex:1;border-top:0;border-left:1px dashed var(--rule)}}
+
+/* touch pad */
+#pad{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 78px);display:none;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:4px;z-index:6}
+#pad button{border:1px solid var(--ink);background:var(--glass);font-size:16px;touch-action:none;user-select:none;-webkit-user-select:none}
+#pad .u{grid-column:2}
+#pad .l{grid-column:1;grid-row:2}#pad .d{grid-column:2;grid-row:2}#pad .r{grid-column:3;grid-row:2}
+
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);background:var(--signal);color:#fff;font-family:var(--f-mono);font-size:12px;padding:7px 12px;z-index:7;opacity:0;transition:opacity .25s;pointer-events:none;max-width:calc(100% - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1}
+
+/* subject mode hides the machine layer */
+body.subject #panel,body.subject #labels,body.subject #toast,body.subject .logbtn{display:none!important}
+
+@media (max-width:860px){
+  #panel{display:none;left:max(16px,env(safe-area-inset-left,0px));width:auto;top:auto;height:46vh;bottom:calc(env(safe-area-inset-bottom,0px) + 74px)}
+  body.show-log #panel{display:flex}
+  .logbtn{display:inline-flex}
+  .brand span{display:none}
+}
+@media (pointer:coarse){#pad{display:grid}body.show-log #pad{display:none}}
+
+/* report sheet */
+#report{position:fixed;inset:0;overflow:auto;background:var(--paper);z-index:50;padding-top:calc(env(safe-area-inset-top,0px) + 24px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 48px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+.rhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px}
+.rhead h1{margin:0;font-stretch:125%;font-weight:800;font-size:clamp(26px,4.4vw,44px);letter-spacing:-.01em;line-height:1;text-transform:uppercase;text-wrap:balance}
+.rhead p{margin:8px 0 0;color:var(--mute);font-size:13px}
+.rhead .controls{gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;padding:3px 8px;border:1px solid currentColor;text-transform:uppercase;letter-spacing:.04em}
+.chip.low{color:var(--warm)}.chip.med{color:var(--mute)}.chip.high{color:var(--signal)}
+.rsec{display:flex;flex-direction:column;gap:14px}
+.rsec>h2{margin:0;font-stretch:125%;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;display:flex;gap:10px;align-items:baseline}
+.rsec>h2 small{font-stretch:100%;letter-spacing:0;text-transform:none;font-weight:400;color:var(--mute);font-size:12px}
+.grid2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+@media (max-width:820px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.planbox{border:1px solid var(--rule);background:#F6F5F2}
+#rplan{width:100%;aspect-ratio:8.5/10.5;max-width:100%;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mute);padding:8px 10px;border-top:1px solid var(--rule)}
+.legend i{display:inline-block;width:14px;height:2px;background:var(--ink);vertical-align:middle;margin-right:5px}
+.legend i.c{width:7px;height:7px;border-radius:50%;background:var(--signal)}
+.legend i.z{height:0;border-top:1px dashed var(--signal);background:none}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-family:var(--f-mono);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);text-align:right;padding:6px 6px;border-bottom:1px solid var(--ink)}
+th:first-child,td:first-child{text-align:left}
+td{padding:8px 6px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;vertical-align:middle}
+td:first-child{font-family:var(--f-ui);font-weight:600}
+td:first-child i{font-style:normal;font-family:var(--f-mono);font-weight:400;color:var(--mute);font-size:11px;margin-right:6px}
+.bar{height:6px;background:var(--rule);position:relative;min-width:60px}
+.bar span{position:absolute;inset:0 auto 0 0;background:var(--ink)}
+.bar.sig span{background:var(--signal)}
+.tablewrap{overflow-x:auto}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.cards{grid-template-columns:minmax(0,1fr)}}
+.card{border:1px solid var(--ink);background:#F7F6F3;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-size:15px;font-weight:700;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.card h3 .mono{font-size:11px;font-weight:400;color:var(--signal)}
+.card .meta{grid-template-columns:96px 1fr;font-size:12.5px}
+.why{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;max-width:72ch}
+.why li{padding-left:16px;border-left:2px solid var(--ink);line-height:1.55;font-size:14.5px}
+.why li.note{border-left-color:var(--signal)}
+.why li .src{display:block;font-family:var(--f-mono);font-size:11px;color:var(--mute);margin-top:3px}
+.axes{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.axis{display:grid;grid-template-columns:150px minmax(0,1fr) 150px;gap:12px;align-items:center;font-size:12.5px}
+.axis .lab{color:var(--mute)}
+.axis .lab.on{color:var(--ink);font-weight:600}
+.axis .lab:last-child{text-align:right}
+.track{position:relative;height:18px}
+.track::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--ink)}
+.track::after{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:1px;background:var(--ink)}
+.track .dot{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--signal);border-radius:50%;box-shadow:0 0 0 4px var(--signal-soft)}
+.track .fill{position:absolute;top:50%;height:3px;margin-top:-1.5px;background:var(--signal);opacity:.45}
+@media (max-width:620px){.axis{grid-template-columns:1fr 1fr}.axis .track{grid-column:1/-1;grid-row:2}}
+.reclist h3{margin:0 0 8px;font-size:11px;font-stretch:125%;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--ink)}
+.reclist ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;font-size:13.5px;line-height:1.45}
+.reclist li::before{content:"+ ";font-family:var(--f-mono);color:var(--signal)}
+.glass{border:1px solid var(--signal);background:var(--signal-soft);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 20px;align-items:end}
+.glass .k{font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--signal)}
+.glass .spec{font-size:clamp(17px,2.2vw,22px);font-weight:600;line-height:1.25;text-wrap:balance}
+.glass .vlt{font-family:var(--f-mono);font-size:28px;text-align:right;color:var(--signal)}
+.glass .vlt small{display:block;font-size:10.5px;color:var(--mute)}
+.glass p{grid-column:1/-1;margin:4px 0 0;font-size:13px;color:var(--mute);max-width:80ch}
+.ai{border:1px solid var(--rule);background:#F7F6F3;padding:16px 18px;max-width:80ch;font-size:14px;line-height:1.55}
+.ai h4{margin:14px 0 4px;font-stretch:125%;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.ai h4:first-child{margin-top:0}
+.ai p{margin:6px 0}
+.ai ul{margin:4px 0;padding-left:18px}
+.ai .err{color:var(--warm)}
+.notice{font-size:14px;color:var(--mute);max-width:70ch;line-height:1.5;border:1px dashed var(--rule);padding:14px 16px}
+#jsonbox{width:100%;height:120px;font-family:var(--f-mono);font-size:11px;border:1px solid var(--rule);background:#F7F6F3;padding:8px}
+@media (prefers-reduced-motion:reduce){.rec::before{animation:none}#toast{transition:none}}
+</style>
+
+<canvas id="scene" aria-label="First-person view of a minimal test room with two windows"></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div class="cross" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="brand"><b>Gaze Decoder</b><span>Drag to look · WASD or arrows to walk · Enter to note · 1–3 glass · H heatmap</span></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="View mode">
+      <button id="m-obs" aria-pressed="true" title="Show what the app tracks">Observer</button>
+      <button id="m-sub" aria-pressed="false" title="Hide tracking for a blind walk">Subject</button>
+    </div>
+    <button class="btn" id="heatbtn" aria-pressed="true" title="Show attention heatmap (H)">Heatmap on</button>
+    <button class="btn logbtn" id="logbtn">Log</button>
+    <button class="btn primary" id="decode">Decode walk</button>
+  </div>
+</header>
+
+<aside id="panel" aria-label="Observer feed">
+  <div class="ph"><h2>Observer</h2><span class="rec" id="clock">0:00</span></div>
+  <div class="pbody">
+    <div class="sec">
+      <h3>Looking at</h3>
+      <div class="now" id="now"><span class="k">nothing tagged</span></div>
+      <dl class="meta" id="nowmeta"></dl>
+    </div>
+    <div class="sec">
+      <h3>Tagged objects</h3>
+      <div id="objs"></div>
+      <div><div class="heatkey"></div><div class="heatlab"><span>heatmap: glanced</span><span>centre of view, long</span></div></div>
+    </div>
+    <div class="sec">
+      <h3>Notes</h3>
+      <ul id="notes"><li class="empty">No notes yet. Type below or press Speak.</li></ul>
+    </div>
+    <div class="sec">
+      <h3>Plan · path</h3>
+      <canvas id="plan"></canvas>
+    </div>
+    <div class="sec">
+      <h3>Event log</h3>
+      <ul id="feed"><li class="empty" style="display:block">Walk into a ring on the floor and hold your look for 2 seconds.</li></ul>
+    </div>
+  </div>
+</aside>
+
+<form id="notebar" autocomplete="off">
+  <div class="field">
+    <input id="note" type="text" placeholder="Say what you notice… “this feels calm”, “too dark”" aria-label="Note">
+    <button type="button" id="mic" hidden aria-pressed="false" title="Dictate a note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Speak</span>
+    </button>
+  </div>
+  <button class="btn primary" type="submit">Note</button>
+</form>
+
+<div id="pad" aria-label="Move">
+  <button class="u" data-k="ArrowUp" aria-label="Forward">▲</button>
+  <button class="l" data-k="ArrowLeft" aria-label="Turn left">◀</button>
+  <button class="d" data-k="ArrowDown" aria-label="Back">▼</button>
+  <button class="r" data-k="ArrowRight" aria-label="Turn right">▶</button>
+</div>
+<div id="glassw" role="group" aria-label="Glass type">
+  <div class="gh"><b>Glass</b><span>light let in (VLT)</span></div>
+  <button class="gbtn" data-g="clear" aria-pressed="true"><span class="gn">Low-iron clear<kbd>1</kbd></span><span class="gv">91%</span><span class="gbar"><i style="width:91%"></i></span></button>
+  <button class="gbtn" data-g="frit" aria-pressed="false"><span class="gn">Fritted dot<kbd>2</kbd></span><span class="gv">58%</span><span class="gbar"><i style="width:58%"></i></span></button>
+  <button class="gbtn" data-g="bronze" aria-pressed="false"><span class="gn">Bronze tint<kbd>3</kbd></span><span class="gv">35%</span><span class="gbar"><i style="width:35%"></i></span></button>
+</div>
+<div id="toast" role="status"></div>
+
+<section id="report" hidden aria-label="Decoded walk"></section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = s => s < 60 ? s.toFixed(1) + ' s' : Math.floor(s/60) + 'm ' + String(Math.round(s%60)).padStart(2,'0') + 's';
+const clockFmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+
+/* ---------- room + hidden metadata ---------- */
+const ROOM = { w: 8, d: 10, h: 3.2, t: 0.25 };
+const CAPTURE_AFTER = 2.0;   // seconds of sustained look inside a zone
+const GLANCE_MIN = 0.25;
+
+const OBJECTS = {
+  'W-01': {
+    name: 'Arched window', kind: 'window',
+    zone: { x: -1.4, z: -3.35, r: 1.8 }, anchor: [-1.4, 3.08, -5],
+    meta: {
+      Geometry: 'Arch, semicircular head R 800, radiused base R 250',
+      Size: '1600 × 2550 mm',
+      Sill: '350 mm above floor',
+      Glass: '',
+      Frame: 'Slim bronze-finish steel, 40 mm sightline',
+      Facing: 'North · sky and upper landscape'
+    },
+    features: { curvature: 1, verticality: 0.85, frame: -0.7, sill: 0.8 }
+  },
+  'W-02': {
+    name: 'Ribbon window', kind: 'window',
+    zone: { x: 2.3, z: 1.0, r: 1.8 }, anchor: [4, 2.4, 1.0],
+    meta: {
+      Geometry: 'Rectangle, sharp 90° corners, 2 mullions',
+      Size: '3400 × 1150 mm',
+      Sill: '1000 mm above floor',
+      Glass: '',
+      Frame: 'Black anodised aluminium, 80 mm sightline',
+      Facing: 'East · horizon band'
+    },
+    features: { curvature: -1, verticality: -0.85, frame: 0.8, sill: -0.5 }
+  },
+  'S-WALL': { name: 'Walls', kind: 'surface', meta: { Material: 'Lime plaster, smooth trowel', Colour: 'Off-white, LRV 82', Thickness: '250 mm' } },
+  'S-FLOOR': { name: 'Floor', kind: 'surface', meta: { Material: 'Polished concrete, pale grey', Finish: 'Honed, low sheen', Note: 'Receives the sun patches from both windows' } },
+  'S-CEIL': { name: 'Ceiling', kind: 'surface', meta: { Material: 'Fair-faced concrete soffit', Height: '3200 mm' } },
+  'F-SOFA': { name: 'Lounge sofa', kind: 'furniture', meta: { Form: 'Low-slung, rounded arms', Material: 'Bouclé wool, oatmeal', Base: 'Recessed oak plinth', Size: '2100 × 900 × 720 mm' } },
+  'F-RUG': { name: 'Rug', kind: 'furniture', meta: { Material: 'Hand-knotted undyed wool', Size: '2800 × 2000 mm' } },
+  'F-LAMP': { name: 'Floor lamp', kind: 'furniture', meta: { Material: 'Linen shade, blackened steel stem', Light: '2700 K warm white' } },
+  'F-TABLE': { name: 'Dining table', kind: 'furniture', meta: { Material: 'Solid white oak, oiled', Size: '2200 × 950 mm', Edge: 'Square, 2 mm arris' } },
+  'F-CHAIR': { name: 'Chairs', kind: 'furniture', meta: { Model: 'Bentwood side chair', Material: 'Ash, black stain', Seat: '450 mm high' } },
+  'F-BENCH': { name: 'Window bench', kind: 'furniture', meta: { Material: 'Terrazzo, white aggregate', Size: '3000 × 550 × 450 mm', Role: 'Window seat under W-02' } },
+  'F-PLANT': { name: 'Olive tree', kind: 'furniture', meta: { Species: 'Olive, potted', Material: 'Glazed stoneware pot, 560 mm', Role: 'Biophilic element' } }
+};
+const WINDOWS = ['W-01', 'W-02'];
+const AXES = [
+  { key: 'curvature',   neg: 'Sharp, orthogonal',     pos: 'Curved, soft' },
+  { key: 'verticality', neg: 'Horizontal, panoramic', pos: 'Vertical, sky-facing' },
+  { key: 'frame',       neg: 'Minimal frame',         pos: 'Expressed frame' },
+  { key: 'sill',        neg: 'Raised sill',           pos: 'Low, grounded sill' }
+];
+/* The three glazing options. VLT = visible light transmission. */
+const GLASS = {
+  clear:  { name: 'Low-iron clear', vlt: 91, spec: 'Low-iron laminated 10.76 mm, VLT 91%', color: 0xE4ECEF, opacity: 0.08, sun: 0xffffff },
+  frit:   { name: 'Fritted dot',    vlt: 58, spec: 'Low-iron with 50% white ceramic dot frit, VLT 58%', color: 0xffffff, opacity: 1, sun: 0xffffff, frit: true },
+  bronze: { name: 'Bronze tint',    vlt: 35, spec: 'Bronze-tint solar-control double glazing, VLT 35%', color: 0x7A6650, opacity: 0.46, sun: 0xFFD3A0 }
+};
+const GLASS_IDS = ['clear', 'frit', 'bronze'];
+let glassNow = 'clear';
+
+/* ---------- session state ---------- */
+let session, gaze, pathTimer = 0;
+const heatCells = new Map();   // 0.2 m cells of accumulated, centre-weighted attention
+let heatDirty = false;
+function newSession() {
+  session = { elapsed: 0, walked: 0, path: [], events: [], notes: [], captures: [] };
+  for (const id in OBJECTS) OBJECTS[id].s = { gaze: 0, attn: 0, dwell: 0, engaged: 0, captures: 0, glances: 0, visits: 0, fixations: [], minDist: Infinity, notes: [], inZone: false };
+  session.glass = Object.fromEntries(GLASS_IDS.map(g => [g, { time: 0, winGaze: 0, winAttn: 0, captures: 0, sentiment: 0, notes: 0 }]));
+  gaze = { tag: null, t: 0, captured: false, dist: 0 };
+  heatCells.clear(); heatDirty = true;
+  $('#feed').innerHTML = '<li class="empty" style="display:block">Walk into a ring on the floor and hold your look for 2 seconds.</li>';
+  const nl = $('#notes'); if (nl) nl.innerHTML = '<li class="empty">No notes yet. Type below or press Speak.</li>';
+}
+newSession();
+
+/* ---------- three.js scene ---------- */
+const canvas = $('#scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xF3F2EE);
+scene.fog = new THREE.Fog(0xF3F2EE, 20, 80);
+const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 200);
+camera.rotation.order = 'YXZ';
+
+const M = {
+  wall:  new THREE.MeshStandardMaterial({ color: 0xEEECE7, roughness: 0.95 }),
+  floor: new THREE.MeshStandardMaterial({ color: 0xD9D6CF, roughness: 0.8 }),
+  ceil:  new THREE.MeshStandardMaterial({ color: 0xF4F3EF, roughness: 1 }),
+  frameSlim: new THREE.MeshStandardMaterial({ color: 0x67615A, roughness: 0.5, metalness: 0.3 }),
+  frameDark: new THREE.MeshStandardMaterial({ color: 0x2C2C2A, roughness: 0.55, metalness: 0.2 }),
+  glass: new THREE.MeshStandardMaterial({ color: 0xE4ECEF, transparent: true, opacity: 0.08, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false }),
+  fabric: new THREE.MeshStandardMaterial({ color: 0xD6D2CA, roughness: 1 }),
+  oak: new THREE.MeshStandardMaterial({ color: 0xC9C0B2, roughness: 0.7 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x3D3B37, roughness: 0.6, metalness: 0.2 }),
+  terrazzo: new THREE.MeshStandardMaterial({ color: 0xE7E4DD, roughness: 0.5 }),
+  rug: new THREE.MeshStandardMaterial({ color: 0xE3DED3, roughness: 1 }),
+  shade: new THREE.MeshStandardMaterial({ color: 0xF3EFE6, roughness: 1, emissive: 0x2a2418 }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0xA9B09C, roughness: 1, flatShading: true }),
+  pot: new THREE.MeshStandardMaterial({ color: 0xBFB8AC, roughness: 0.4 }),
+  outside: new THREE.MeshStandardMaterial({ color: 0xF8F7F3, roughness: 1 }),
+  ground: new THREE.MeshStandardMaterial({ color: 0xE3E1DB, roughness: 1 })
+};
+const edgeMat = new THREE.LineBasicMaterial({ color: 0x8E8B83 });
+const gazeTargets = [];
+
+function edges(mesh, angle = 25) { mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, angle), edgeMat)); return mesh; }
+function tagMesh(mesh, tag, shadow = true) {
+  mesh.userData.tag = tag;
+  mesh.castShadow = shadow; mesh.receiveShadow = true;
+  gazeTargets.push(mesh); return mesh;
+}
+function archPath(p, cx, y0, w, h, rb) {
+  const r = w / 2, x0 = cx - r, x1 = cx + r, yc = y0 + h - r;
+  p.moveTo(x0 + rb, y0); p.lineTo(x1 - rb, y0);
+  p.quadraticCurveTo(x1, y0, x1, y0 + rb); p.lineTo(x1, yc);
+  p.absarc(cx, yc, r, 0, Math.PI, false);
+  p.lineTo(x0, y0 + rb); p.quadraticCurveTo(x0, y0, x0 + rb, y0);
+  return p;
+}
+function rectPath(p, x0, y0, x1, y1) { p.moveTo(x0, y0); p.lineTo(x1, y0); p.lineTo(x1, y1); p.lineTo(x0, y1); p.lineTo(x0, y0); return p; }
+function wallGeo(W, H, t, holes) {
+  const s = rectPath(new THREE.Shape(), -W / 2, 0, W / 2, H);
+  holes.forEach(h => s.holes.push(h));
+  return new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false, curveSegments: 48 });
+}
+const { w: RW, d: RD, h: RH, t: T } = ROOM;
+
+// North wall with the arched window (W-01)
+{
+  const g = new THREE.Group(); g.position.set(0, 0, -RD / 2 - T); scene.add(g);
+  const cx = -1.4, y0 = 0.35, w = 1.6, h = 2.55, rb = 0.25, f = 0.045;
+  g.add(edges(tagMesh(new THREE.Mesh(wallGeo(RW + 2 * T, RH, T, [archPath(new THREE.Path(), cx, y0, w, h, rb)]), M.wall), 'S-WALL')));
+  const glass = new THREE.Mesh(new THREE.ShapeGeometry(archPath(new THREE.Shape(), cx, y0, w, h, rb), 48), M.glass);
+  glass.position.z = T * 0.55; tagMesh(glass, 'W-01', false); g.add(glass);
+  const fs = archPath(new THREE.Shape(), cx, y0 - f, w + 2 * f, h + 2 * f, rb + f);
+  fs.holes.push(archPath(new THREE.Path(), cx, y0, w, h, rb));
+  const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(fs, { depth: 0.05, bevelEnabled: false, curveSegments: 48 }), M.frameSlim);
+  frame.position.z = T * 0.55 - 0.025; g.add(edges(tagMesh(frame, 'W-01')));
+}
+// East wall with the sharp ribbon window (W-02). Local x runs along world z.
+{
+  const g = new THREE.Group(); g.rotation.y = -Math.PI / 2; g.position.set(RW / 2 + T, 0, 0); scene.add(g);
+  const cx = 1.0, y0 = 1.0, w = 3.4, h = 1.15, f = 0.08;
+  const x0 = cx - w / 2, x1 = cx + w / 2, y1 = y0 + h;
+  g.add(edges(tagMesh(new THREE.Mesh(wallGeo(RD + 2 * T, RH, T, [rectPath(new THREE.Path(), x0, y0, x1, y1)]), M.wall), 'S-WALL')));
+  const glass = new THREE.Mesh(new THREE.ShapeGeometry(rectPath(new THREE.Shape(), x0, y0, x1, y1)), M.glass);
+  glass.position.z = T * 0.45; tagMesh(glass, 'W-02', false); g.add(glass);
+  const fs = rectPath(new THREE.Shape(), x0 - f, y0 - f, x1 + f, y1 + f);
+  fs.holes.push(rectPath(new THREE.Path(), x0, y0, x1, y1));
+  const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(fs, { depth: 0.09, bevelEnabled: false }), M.frameDark);
+  frame.position.z = T * 0.45 - 0.045; g.add(edges(tagMesh(frame, 'W-02')));
+  [-1, 1].forEach(k => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, h, 0.09), M.frameDark);
+    m.position.set(cx + k * w / 6, y0 + h / 2, T * 0.45); g.add(edges(tagMesh(m, 'W-02')));
+  });
+}
+// Plain walls, floor, ceiling
+[[RW + 2 * T, RH, T, 0, RH / 2, RD / 2 + T / 2], [T, RH, RD + 2 * T, -RW / 2 - T / 2, RH / 2, 0]].forEach(([a, b, c, x, y, z]) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(a, b, c), M.wall); m.position.set(x, y, z); scene.add(edges(tagMesh(m, 'S-WALL')));
+});
+{ const m = new THREE.Mesh(new THREE.BoxGeometry(RW + 2 * T, 0.1, RD + 2 * T), M.floor); m.position.y = -0.05; scene.add(edges(tagMesh(m, 'S-FLOOR'))); }
+{ const m = new THREE.Mesh(new THREE.BoxGeometry(RW + 2 * T, 0.15, RD + 2 * T), M.ceil); m.position.y = RH + 0.075; scene.add(edges(tagMesh(m, 'S-CEIL'))); }
+
+// Furniture: simple tagged pieces, each with hidden metadata and a floor collider
+const colliders = [];
+function part(tag, geo, mat, x, y, z, shadow = true) {
+  const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z);
+  scene.add(edges(tagMesh(m, tag, shadow), 30)); return m;
+}
+const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const C = (rt, rb, h, seg = 24) => new THREE.CylinderGeometry(rt, rb, h, seg);
+{
+  // Sofa facing the arched window, on a rug
+  const sz = -2.6;
+  part('F-RUG', B(2.8, 0.012, 2.0), M.rug, -1.4, 0.006, -3.2, false);
+  part('F-SOFA', B(1.74, 0.42, 0.9), M.fabric, -1.4, 0.25, sz);
+  part('F-SOFA', B(1.74, 0.36, 0.2), M.fabric, -1.4, 0.62, sz + 0.45);
+  [-2.27, -0.53].forEach(x => { const a = part('F-SOFA', C(0.18, 0.18, 0.9, 24), M.fabric, x, 0.42, sz); a.rotation.x = Math.PI / 2; });
+  part('F-SOFA', B(1.9, 0.06, 0.8), M.oak, -1.4, 0.03, sz);
+  colliders.push([-2.5, -0.3, sz - 0.5, sz + 0.55]);
+  // Floor lamp beside the sofa
+  part('F-LAMP', C(0.18, 0.18, 0.03), M.dark, -2.95, 0.015, -2.0);
+  part('F-LAMP', C(0.012, 0.012, 1.5, 8), M.dark, -2.95, 0.78, -2.0);
+  part('F-LAMP', C(0.2, 0.27, 0.32), M.shade, -2.95, 1.62, -2.0);
+  colliders.push([-3.2, -2.7, -2.25, -1.75]);
+  // Dining table and four chairs
+  part('F-TABLE', B(2.2, 0.05, 0.95), M.oak, -2.2, 0.735, 1.5);
+  [[-3.2, 1.15], [-1.2, 1.15], [-3.2, 1.85], [-1.2, 1.85]].forEach(([x, z]) => part('F-TABLE', B(0.06, 0.71, 0.06), M.oak, x, 0.355, z));
+  [[-2.75, 0.62, -1], [-1.65, 0.62, -1], [-2.75, 2.38, 1], [-1.65, 2.38, 1]].forEach(([x, z, s]) => {
+    part('F-CHAIR', B(0.44, 0.04, 0.44), M.dark, x, 0.45, z);
+    part('F-CHAIR', B(0.44, 0.4, 0.035), M.dark, x, 0.68, z + s * 0.2);
+    part('F-CHAIR', B(0.36, 0.43, 0.36), M.dark, x, 0.215, z).scale.set(1, 1, 1);
+  });
+  colliders.push([-3.35, -1.05, 0.35, 2.65]);
+  // Terrazzo window bench under the ribbon window
+  part('F-BENCH', B(0.55, 0.45, 3.0), M.terrazzo, RW / 2 - 0.3, 0.225, 1.0);
+  colliders.push([3.4, 4, -0.55, 2.55]);
+  // Potted olive tree in the north-east corner
+  part('F-PLANT', C(0.28, 0.22, 0.5), M.pot, 3.2, 0.25, -4.2);
+  part('F-PLANT', C(0.03, 0.04, 0.9, 6), M.oak, 3.2, 0.9, -4.2);
+  part('F-PLANT', new THREE.IcosahedronGeometry(0.62, 1), M.leaf, 3.2, 1.65, -4.2);
+  colliders.push([2.85, 3.55, -4.55, -3.85]);
+}
+
+// Outside: abstract landscape seen through the openings
+{
+  const gr = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), M.ground); gr.rotation.x = -Math.PI / 2; gr.position.y = -0.12; scene.add(gr);
+  const blocks = [[-9, -20, 6, 7, 5], [2, -26, 9, 4, 6], [12, -18, 4, 11, 4], [-20, -32, 10, 5, 8], [22, -8, 6, 6, 10], [28, 6, 8, 3, 12], [20, 16, 5, 9, 5], [36, -4, 10, 14, 6]];
+  blocks.forEach(([x, z, w, h, d]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.outside); m.position.set(x, h / 2 - 0.1, z); scene.add(edges(m)); });
+  const trees = [[-4, -11], [-1, -13], [4, -10.5], [11, 3], [12.5, -1], [14, 6], [-7, -15]];
+  trees.forEach(([x, z], i) => {
+    const s = 1.1 + (i % 3) * 0.35;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2, 6), M.outside); trunk.position.set(x, 1, z); scene.add(trunk);
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 1), M.outside); crown.position.set(x, 2 + s * 0.8, z); scene.add(edges(crown, 10));
+  });
+}
+
+// Light
+const hemi = new THREE.HemisphereLight(0xffffff, 0xD6D3CC, 0.95);
+scene.add(hemi);
+scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+sun.position.set(9, 7.5, -7); sun.castShadow = true;
+Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+scene.add(sun); scene.add(sun.target);
+
+// Glass switching: material look + how much sun and sky light reach the room
+const fritTex = (() => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(228,236,239,0.10)'; c.fillRect(0, 0, 64, 64);
+  c.fillStyle = 'rgba(250,250,247,0.95)';
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { c.beginPath(); c.arc(16 + i * 32, 16 + j * 32, 11.3, 0, Math.PI * 2); c.fill(); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(9, 9); return t;
+})();
+function applyGlass(id, silent) {
+  const g = GLASS[id]; glassNow = id;
+  M.glass.color.setHex(g.color); M.glass.opacity = g.opacity;
+  M.glass.map = g.frit ? fritTex : null; M.glass.needsUpdate = true;
+  sun.intensity = 0.66 * g.vlt / 100;
+  sun.color.setHex(g.sun);
+  hemi.intensity = 0.5 + 0.25 * g.vlt / 100;
+  WINDOWS.forEach(w => { OBJECTS[w].meta.Glass = g.spec; });
+  document.querySelectorAll('.gbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.g === id));
+  const nm = document.getElementById('nowmeta'); if (nm) nm.dataset.tag = '';
+  if (!silent) { log('glass', null, `Glass switched to ${g.name} (VLT ${g.vlt}%)`); toast(`Glass: ${g.name} · ${g.vlt}% light`); }
+}
+
+// Hit zones (the "hit boxes")
+const zoneGroup = new THREE.Group(); scene.add(zoneGroup);
+const zoneFill = {};
+WINDOWS.forEach(id => {
+  const z = OBJECTS[id].zone;
+  const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.025, z.r, 96), new THREE.MeshBasicMaterial({ color: 0x3651C9, transparent: true, opacity: 0.75 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(z.x, 0.006, z.z); zoneGroup.add(ring);
+  const fill = new THREE.Mesh(new THREE.CircleGeometry(z.r, 96), new THREE.MeshBasicMaterial({ color: 0x3651C9, transparent: true, opacity: 0.05, depthWrite: false }));
+  fill.rotation.x = -Math.PI / 2; fill.position.set(z.x, 0.004, z.z); zoneGroup.add(fill);
+  zoneFill[id] = fill;
+});
+
+/* ---------- attention heatmap ----------
+   Every frame, 15 rays sample the view: the centre ray counts fully, a ring at about 6° counts 0.45,
+   a ring at about 13° counts 0.15. Hits add time × weight to 0.2 m cells. The strongest 96 cells are
+   sent to a shader that paints a soft glow on every tagged surface. */
+const MAXP = 96;
+const heatU = {
+  uPts: { value: Array.from({ length: MAXP }, () => new THREE.Vector4(0, -99, 0, 0)) },
+  uCount: { value: 0 }, uMax: { value: 1 }, uSigma: { value: 0.36 }
+};
+const heatMat = new THREE.ShaderMaterial({
+  uniforms: heatU, transparent: true, depthWrite: false,
+  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+  fragmentShader: `#define MAXP ${MAXP}
+    uniform vec4 uPts[MAXP]; uniform int uCount; uniform float uMax; uniform float uSigma; varying vec3 vW;
+    vec3 ramp(float t){ vec3 a=vec3(0.21,0.32,0.79), b=vec3(0.15,0.75,0.85), c=vec3(0.98,0.85,0.25), d=vec3(0.92,0.25,0.15);
+      if (t < 0.33) return mix(a,b,t/0.33); if (t < 0.66) return mix(b,c,(t-0.33)/0.33); return mix(c,d,(t-0.66)/0.34); }
+    void main(){ float h = 0.0; float k = 1.0 / (2.0 * uSigma * uSigma);
+      for (int i = 0; i < MAXP; i++) { if (i >= uCount) break; vec3 d = vW - uPts[i].xyz; h += uPts[i].w * exp(-dot(d,d) * k); }
+      float t = clamp(h / uMax, 0.0, 1.0); if (t < 0.04) discard;
+      gl_FragColor = vec4(ramp(t), smoothstep(0.04, 0.35, t) * 0.8); }`
+});
+gazeTargets.forEach(m => { const o = new THREE.Mesh(m.geometry, heatMat); o.renderOrder = 3; m.add(o); });
+let heatOn = true;
+// rings at about 3°, 7° and 12° from the crosshair (NDC radius = tan(angle) / tan(36°))
+const SAMPLES = [[0, 0, 1]];
+[[0.072, 8, 0.7], [0.169, 12, 0.35], [0.292, 16, 0.12]].forEach(([r, n, w], k) => {
+  for (let i = 0; i < n; i++) { const a = (i + k * 0.5) * Math.PI * 2 / n; SAMPLES.push([r * Math.cos(a), r * Math.sin(a), w]); }
+});
+const WSUM = SAMPLES.reduce((a, s) => a + s[2], 0);   // attention is normalised so a full second of looking = 1
+function depositHeat(p, w, tag) {
+  const key = Math.round(p.x / 0.2) + ',' + Math.round(p.y / 0.2) + ',' + Math.round(p.z / 0.2);
+  let c = heatCells.get(key);
+  if (!c) { c = { x: p.x, y: p.y, z: p.z, w: 0, tag }; heatCells.set(key, c); }
+  const nw = c.w + w;
+  c.x = (c.x * c.w + p.x * w) / nw; c.y = (c.y * c.w + p.y * w) / nw; c.z = (c.z * c.w + p.z * w) / nw; c.w = nw;
+  heatDirty = true;
+}
+function topHeat(n) { return [...heatCells.values()].sort((a, b) => b.w - a.w).slice(0, n); }
+function pushHeat() {
+  if (!heatDirty) return; heatDirty = false;
+  const top = topHeat(MAXP);
+  top.forEach((c, i) => heatU.uPts.value[i].set(c.x, c.y, c.z, c.w));
+  heatU.uCount.value = top.length;
+  heatU.uMax.value = Math.max(2.5, (top[0] ? top[0].w : 0) * 2.2);
+}
+
+/* ---------- movement ---------- */
+let yaw = 0.18, pitch = -0.02;
+camera.position.set(0.6, 1.6, 3.6);
+const keys = new Set();
+const typing = e => e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+addEventListener('keydown', e => {
+  if (typing(e) || !$('#report').hidden) return;
+  if (e.key === 'Enter') { e.preventDefault(); $('#note').focus(); return; }
+  keys.add(e.code);
+  if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); canvas.classList.add('drag'); document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const k = e.pointerType === 'touch' ? 0.006 : 0.0042;
+  yaw -= (e.clientX - drag.x) * k; pitch -= (e.clientY - drag.y) * k;
+  pitch = Math.max(-1.25, Math.min(1.25, pitch));
+  drag = { x: e.clientX, y: e.clientY };
+});
+const endDrag = () => { drag = null; canvas.classList.remove('drag'); };
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+document.querySelectorAll('#pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); keys.add(k); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => keys.delete(k)));
+});
+
+function move(dt) {
+  const run = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 2 : 1;
+  const sp = 1.7 * run * dt, turn = 1.6 * dt;
+  let f = 0, s = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) f += 1;
+  if (keys.has('KeyS') || keys.has('ArrowDown')) f -= 1;
+  if (keys.has('KeyD')) s += 1;
+  if (keys.has('KeyA')) s -= 1;
+  if (keys.has('ArrowLeft') || keys.has('KeyQ')) yaw += turn;
+  if (keys.has('ArrowRight') || keys.has('KeyE')) yaw -= turn;
+  const p = camera.position, ox = p.x, oz = p.z;
+  p.x += (-Math.sin(yaw) * f + Math.cos(yaw) * s) * sp;
+  p.z += (-Math.cos(yaw) * f - Math.sin(yaw) * s) * sp;
+  p.x = Math.max(-RW / 2 + 0.3, Math.min(RW / 2 - 0.3, p.x));
+  p.z = Math.max(-RD / 2 + 0.3, Math.min(RD / 2 - 0.3, p.z));
+  const hit = (x, z) => colliders.some(([a, b, c, d]) => x > a - 0.22 && x < b + 0.22 && z > c - 0.22 && z < d + 0.22);
+  if (hit(p.x, p.z)) { if (!hit(ox, p.z)) p.x = ox; else if (!hit(p.x, oz)) p.z = oz; else { p.x = ox; p.z = oz; } }
+  session.walked += Math.hypot(p.x - ox, p.z - oz);
+  camera.rotation.set(pitch, yaw, 0);
+}
+
+/* ---------- tracking ---------- */
+const ray = new THREE.Raycaster();
+const center = new THREE.Vector2(0, 0);
+function currentZone() { return WINDOWS.find(id => OBJECTS[id].s.inZone) || null; }
+
+function log(type, tag, text) {
+  const ev = { t: +session.elapsed.toFixed(1), type, tag, text };
+  session.events.push(ev);
+  const feed = $('#feed');
+  const empty = feed.querySelector('.empty'); if (empty) empty.remove();
+  const li = document.createElement('li'); li.className = type;
+  li.innerHTML = `<span class="t">${clockFmt(ev.t)}</span><span class="m"></span>`;
+  li.querySelector('.m').textContent = text;
+  feed.prepend(li);
+  while (feed.children.length > 60) feed.lastChild.remove();
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function endFixation() {
+  if (!gaze.tag) return;
+  const s = OBJECTS[gaze.tag].s;
+  if (gaze.t >= CAPTURE_AFTER) {
+    s.fixations.push(+gaze.t.toFixed(2));
+    if (gaze.captured) log('fix', gaze.tag, `Held ${gaze.t.toFixed(1)} s on ${OBJECTS[gaze.tag].name}`);
+  } else if (gaze.t >= GLANCE_MIN && OBJECTS[gaze.tag].kind === 'window') s.glances++;
+}
+
+function track(dt) {
+  session.elapsed += dt;
+  const p = camera.position;
+  pathTimer += dt;
+  if (pathTimer > 0.35) { pathTimer = 0; session.path.push([+p.x.toFixed(2), +p.z.toFixed(2)]); if (session.path.length > 4000) session.path.splice(0, 1); }
+
+  WINDOWS.forEach(id => {
+    const o = OBJECTS[id], z = o.zone;
+    const inside = Math.hypot(p.x - z.x, p.z - z.z) < z.r;
+    if (inside && !o.s.inZone) { o.s.visits++; log('enter', id, `Entered ${o.name} zone`); }
+    if (!inside && o.s.inZone) log('exit', id, `Left ${o.name} zone after ${fmt(o.s.dwellRun || 0)}`);
+    o.s.dwellRun = inside ? (o.s.inZone ? (o.s.dwellRun || 0) + dt : 0) : 0;
+    o.s.inZone = inside;
+    if (inside) o.s.dwell += dt;
+    zoneFill[id].material.opacity = inside ? 0.14 : 0.05;
+  });
+
+  // glass exposure: how long each glass option was on show
+  const gs = session.glass[glassNow]; gs.time += dt;
+
+  // centre-weighted attention: 15 rays, the centre one counts most
+  let hit = null;
+  SAMPLES.forEach(([sx, sy, w], i) => {
+    center.set(sx / camera.aspect * 1.0, sy);
+    ray.setFromCamera(center, camera);
+    const h = ray.intersectObjects(gazeTargets, false)[0];
+    if (i === 0) hit = h;
+    if (!h) return;
+    const tg = h.object.userData.tag;
+    OBJECTS[tg].s.attn += w * dt / WSUM;
+    if (OBJECTS[tg].kind === 'window') gs.winAttn += w * dt / WSUM;
+    depositHeat(h.point, w * dt, tg);
+  });
+  center.set(0, 0);
+  const tag = hit ? hit.object.userData.tag : null;
+  if (tag && OBJECTS[tag].kind === 'window') gs.winGaze += dt;
+  if (tag !== gaze.tag) { endFixation(); gaze = { tag, t: 0, captured: false, dist: 0 }; }
+  if (tag) {
+    const o = OBJECTS[tag];
+    gaze.t += dt; gaze.dist = hit.distance; o.s.gaze += dt;
+    if (o.kind === 'window') { o.s.minDist = Math.min(o.s.minDist, hit.distance); if (o.s.inZone) o.s.engaged += dt; }
+    const zone = currentZone();
+    if (!gaze.captured && gaze.t >= CAPTURE_AFTER && zone) {
+      gaze.captured = true; o.s.captures++;
+      if (o.kind === 'window') gs.captures++;
+      session.captures.push({ x: +p.x.toFixed(2), z: +p.z.toFixed(2), tag, zone, t: +session.elapsed.toFixed(1) });
+      const msg = `Captured ${tag} · ${o.name} · ${hit.distance.toFixed(1)} m · from ${zone} zone`;
+      log('capture', tag, msg); toast('● ' + msg);
+    }
+  }
+  document.body.classList.toggle('locked', !!(tag && gaze.t >= CAPTURE_AFTER && currentZone()));
+}
+
+/* ---------- notes ---------- */
+const POS = 'love like likes liked nice beautiful great good calm cozy cosy soft warm amazing wow pretty elegant peaceful favorite favourite prefer gorgeous lovely bright airy open interesting cool'.split(' ');
+const NEG = 'hate dislike ugly cold harsh dark gloomy cramped heavy boring bad dull busy weird closed strange awkward'.split(' ');
+const FLIP = new Set(['not', "don't", 'dont', 'never', 'no', "isn't", 'isnt', "doesn't", 'doesnt']);
+const CUES = [
+  { re: /\b(dark|dim|gloomy|bright|light|airy|sunny|glare)\b/, attr: 'Glass', what: 'light transmission' },
+  { re: /\b(curv\w*|round\w*|arch\w*|soft|organic|flow\w*)\b/, attr: 'Geometry', what: 'form' },
+  { re: /\b(sharp|clean|crisp|modern|minimal|straight|square|angular)\b/, attr: 'Geometry', what: 'form' },
+  { re: /\b(frame\w*|thick|thin|black|mullion\w*|heavy)\b/, attr: 'Frame', what: 'frame' },
+  { re: /\b(view|outside|horizon|sky|landscape|trees?|see)\b/, attr: 'Facing', what: 'view' },
+  { re: /\b(low|high|floor|sill|sit|seat)\b/, attr: 'Sill', what: 'sill height' },
+  { re: /\b(warm|cold|cool|tint\w*|colou?r|brown|bronze|green)\b/, attr: 'Glass', what: 'tint' },
+  { re: /\b(big|large|tall|wide|small|narrow|huge|tiny|long)\b/, attr: 'Size', what: 'proportion' },
+  { re: /\b(wall|plaster|texture|concrete|floor|ceiling|material)\b/, attr: 'Material', what: 'material' }
+];
+function analyseNote(text) {
+  const toks = text.toLowerCase().replace(/[^a-z'\s]/g, ' ').split(/\s+/).filter(Boolean);
+  let sent = 0;
+  toks.forEach((w, i) => {
+    const flip = FLIP.has(toks[i - 1]) || FLIP.has(toks[i - 2]);
+    if (POS.includes(w)) sent += flip ? -1 : 1;
+    else if (NEG.includes(w)) sent += flip ? 1 : -1;
+  });
+  const low = toks.join(' ');
+  const cues = CUES.filter(c => c.re.test(low)).map(c => ({ attr: c.attr, what: c.what }));
+  return { sentiment: Math.max(-2, Math.min(2, sent)), cues };
+}
+function nearestWindow() {
+  const z = currentZone(); if (z) return z;
+  const p = camera.position; let best = null, bd = 4;
+  WINDOWS.forEach(id => { const o = OBJECTS[id]; const d = Math.hypot(p.x - o.zone.x, p.z - o.zone.z); if (d < bd) { bd = d; best = id; } });
+  return best;
+}
+function addNote(text, source) {
+  text = text.trim(); if (!text) return;
+  const target = (gaze.tag && OBJECTS[gaze.tag].kind === 'window') ? gaze.tag : (nearestWindow() || gaze.tag);
+  const a = analyseNote(text);
+  const note = { t: +session.elapsed.toFixed(1), text, source, target, lookingAt: gaze.tag, zone: currentZone(), glass: glassNow, sentiment: a.sentiment, cues: a.cues };
+  session.notes.push(note);
+  if (target) OBJECTS[target].s.notes.push(note);
+  const gs = session.glass[glassNow]; gs.notes++; gs.sentiment += a.sentiment;
+  const where = target ? `${target} ${OBJECTS[target].name}` : 'the room';
+  log('note', target, `“${text}” → ${where}`);
+  toast(`Note linked to ${where}`);
+  renderNotes();
+}
+function renderNotes() {
+  const ul = $('#notes'); if (!ul) return;
+  if (!session.notes.length) { ul.innerHTML = '<li class="empty">No notes yet. Type below or press Speak.</li>'; return; }
+  ul.innerHTML = session.notes.slice().reverse().map(n => {
+    const tone = n.sentiment > 0 ? '<span class="pos">positive</span>' : n.sentiment < 0 ? '<span class="neg">negative</span>' : 'neutral';
+    return `<li><span class="q">“${esc(n.text)}”</span><span class="w">${clockFmt(n.t)} · ${n.target ? esc(n.target + ' ' + OBJECTS[n.target].name) : 'room'} · ${esc(GLASS[n.glass].name)} · ${tone} · ${n.source}</span></li>`;
+  }).join('');
+  const sb = document.querySelector('#notebar .btn'); if (sb) sb.innerHTML = `<span class="ncount">${session.notes.length}</span>Note`;
+}
+$('#notebar').addEventListener('submit', e => { e.preventDefault(); const i = $('#note'); addNote(i.value, 'typed'); i.value = ''; i.blur(); });
+$('#note').addEventListener('keydown', e => { if (e.key === 'Escape') e.target.blur(); });
+
+/* ---------- optional platform capabilities: dictation + Claude ---------- */
+let dict = null, sampler = null, partialBuf = '';
+if (window.claude && window.claude.use) {
+  window.claude.use('dictation').then(d => {
+    if (!d) return; dict = d; const mic = $('#mic'); mic.hidden = false;
+    d.onPartial(({ text }) => { $('#note').placeholder = text ? '… ' + text : 'Listening…'; });
+    d.onFinal(({ text }) => { partialBuf += text; const t = partialBuf.trim(); if (t) { addNote(t, 'voice'); partialBuf = ''; } });
+    d.onState(({ state, reason }) => {
+      const on = state !== 'idle';
+      mic.classList.toggle('on', on); mic.setAttribute('aria-pressed', on);
+      mic.querySelector('span').textContent = on ? 'Stop' : 'Speak';
+      if (!on) $('#note').placeholder = 'Say what you notice… “this feels calm”, “too dark”';
+      if (!on && (reason === 'not_granted' || reason === 'unavailable')) mic.hidden = true;
+    });
+  }).catch(() => {});
+  window.claude.use('sample').then(s => { sampler = s; }).catch(() => {});
+}
+$('#mic').addEventListener('click', () => {
+  if (!dict) return;
+  if (dict.active()) { dict.stop().catch(() => {}); return; }
+  dict.start().catch(err => {
+    if (err && (err.code === 'not_granted' || err.code === 'unavailable')) $('#mic').hidden = true;
+    else if (err && err.code !== 'stopped') toast('Dictation did not start. Type your note instead.');
+  });
+});
+
+/* ---------- observer UI ---------- */
+function setMode(sub) {
+  document.body.classList.toggle('subject', sub);
+  $('#m-sub').setAttribute('aria-pressed', sub); $('#m-obs').setAttribute('aria-pressed', !sub);
+  zoneGroup.visible = !sub;
+  heatMat.visible = heatOn && !sub;
+}
+$('#m-obs').onclick = () => setMode(false);
+$('#m-sub').onclick = () => setMode(true);
+function setHeat(on) {
+  heatOn = on; heatMat.visible = on && !document.body.classList.contains('subject');
+  const b = $('#heatbtn'); b.setAttribute('aria-pressed', on); b.textContent = on ? 'Heatmap on' : 'Heatmap off';
+}
+$('#heatbtn').onclick = () => setHeat(!heatOn);
+document.querySelectorAll('.gbtn').forEach(b => b.addEventListener('click', () => { if (b.dataset.g !== glassNow) applyGlass(b.dataset.g); b.blur(); }));
+addEventListener('keydown', e => {
+  if (typing(e) || !$('#report').hidden) return;
+  if (e.key === '1' || e.key === '2' || e.key === '3') { const g = GLASS_IDS[+e.key - 1]; if (g !== glassNow) applyGlass(g); }
+  if (e.key === 'h' || e.key === 'H') setHeat(!heatOn);
+});
+applyGlass('clear', true);
+$('#logbtn').onclick = () => document.body.classList.toggle('show-log');
+
+const labelEls = {};
+WINDOWS.forEach(id => {
+  const el = document.createElement('div'); el.className = 'tag';
+  $('#labels').appendChild(el); labelEls[id] = el;
+});
+const v3 = new THREE.Vector3();
+function updateLabels() {
+  if (document.body.classList.contains('subject')) return;
+  const W = innerWidth, H = innerHeight;
+  WINDOWS.forEach(id => {
+    const o = OBJECTS[id], el = labelEls[id];
+    v3.set(...o.anchor).project(camera);
+    if (v3.z > 1 || Math.abs(v3.x) > 1.2 || Math.abs(v3.y) > 1.2) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.style.left = ((v3.x + 1) / 2 * W) + 'px';
+    el.style.top = ((1 - v3.y) / 2 * H - 6) + 'px';
+    el.classList.toggle('hot', gaze.tag === id);
+    el.innerHTML = `<b>${id}</b> ${o.name} · ${o.s.gaze.toFixed(1)} s`;
+  });
+}
+
+function renderPanel() {
+  $('#clock').textContent = clockFmt(session.elapsed);
+  const now = $('#now'), nm = $('#nowmeta');
+  if (gaze.tag) {
+    const o = OBJECTS[gaze.tag];
+    now.innerHTML = `<span><b>${gaze.tag}</b> · ${esc(o.name)}</span><span class="k">${gaze.dist.toFixed(1)} m away · ${gaze.t.toFixed(1)} s this look${currentZone() ? '' : ' · outside zones'}</span>`;
+    if (nm.dataset.tag !== gaze.tag) { nm.dataset.tag = gaze.tag; nm.innerHTML = Object.entries(o.meta).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join(''); }
+  } else { now.innerHTML = '<span class="k">nothing tagged</span>'; nm.dataset.tag = ''; nm.innerHTML = ''; }
+  $('#objs').innerHTML = Object.entries(OBJECTS).filter(([id, o]) => o.kind === 'window' || o.s.gaze > 0.05).map(([id, o]) => {
+    const s = o.s;
+    const extra = o.kind === 'window' ? `<span>dwell <b>${s.dwell.toFixed(1)}</b></span><span>captures <b>${s.captures}</b></span><span>visits <b>${s.visits}</b></span>` : (s.captures ? `<span>captures <b>${s.captures}</b></span>` : '');
+    return `<div class="objrow${s.inZone ? ' in' : ''}"><span class="n"><i>${id}</i>${esc(o.name)}</span><span class="mono">${s.gaze.toFixed(1)} s</span><span class="v">${extra}${s.notes.length ? `<span>notes <b>${s.notes.length}</b></span>` : ''}</span></div>`;
+  }).join('');
+  drawPlan($('#plan'), false);
+}
+
+/* plan drawing (top-down, north up) */
+function drawPlan(cv, big) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cw = cv.clientWidth, ch = cv.clientHeight; if (!cw || !ch) return;
+  if (cv.width !== Math.round(cw * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, cw, ch);
+  const pad = big ? 26 : 10;
+  const sc = Math.min((cw - 2 * pad) / (RW + 2 * T), (ch - 2 * pad) / (RD + 2 * T));
+  const X = x => cw / 2 + x * sc, Z = z => ch / 2 + z * sc;
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue('--ink').trim(), sig = css.getPropertyValue('--signal').trim(), mute = css.getPropertyValue('--mute').trim();
+  // walls
+  c.fillStyle = ink;
+  c.fillRect(X(-RW / 2 - T), Z(-RD / 2 - T), (RW + 2 * T) * sc, T * sc);
+  c.fillRect(X(-RW / 2 - T), Z(RD / 2), (RW + 2 * T) * sc, T * sc);
+  c.fillRect(X(-RW / 2 - T), Z(-RD / 2 - T), T * sc, (RD + 2 * T) * sc);
+  c.fillRect(X(RW / 2), Z(-RD / 2 - T), T * sc, (RD + 2 * T) * sc);
+  // openings
+  c.clearRect(X(-2.2), Z(-RD / 2 - T) - 1, 1.6 * sc, T * sc + 2);
+  c.clearRect(X(RW / 2) - 1, Z(1 - 1.7), T * sc + 2, 3.4 * sc);
+  c.strokeStyle = ink; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(X(-2.2), Z(-RD / 2 - T / 2)); c.lineTo(X(-0.6), Z(-RD / 2 - T / 2)); c.stroke();
+  c.beginPath(); c.arc(X(-1.4), Z(-RD / 2 - T / 2), 0.8 * sc, Math.PI, 0); c.setLineDash([2, 3]); c.stroke(); c.setLineDash([]);
+  [RW / 2 + T * 0.3, RW / 2 + T * 0.7].forEach(x => { c.beginPath(); c.moveTo(X(x), Z(-0.7)); c.lineTo(X(x), Z(2.7)); c.stroke(); });
+  // zones
+  c.strokeStyle = sig; c.setLineDash([4, 4]); c.lineWidth = 1;
+  WINDOWS.forEach(id => { const z = OBJECTS[id].zone; c.beginPath(); c.arc(X(z.x), Z(z.z), z.r * sc, 0, Math.PI * 2); c.stroke(); });
+  c.setLineDash([]);
+  if (big) {
+    c.fillStyle = mute; c.font = '11px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    c.fillText('W-01', X(-1.4), Z(-RD / 2 - T) - 8);
+    c.save(); c.translate(X(RW / 2 + T) + 12, Z(1)); c.rotate(Math.PI / 2); c.fillText('W-02', 0, 0); c.restore();
+    c.fillText('N ↑', X(-RW / 2 - T) + 14, Z(-RD / 2 - T) - 8);
+  }
+  // path
+  const pts = session.path;
+  if (pts.length > 1) {
+    c.strokeStyle = ink; c.globalAlpha = 0.55; c.lineWidth = big ? 1.6 : 1.2; c.lineJoin = 'round';
+    c.beginPath(); pts.forEach(([x, z], i) => i ? c.lineTo(X(x), Z(z)) : c.moveTo(X(x), Z(z))); c.stroke(); c.globalAlpha = 1;
+  }
+  // captures
+  c.fillStyle = sig;
+  session.captures.forEach(k => { c.beginPath(); c.arc(X(k.x), Z(k.z), big ? 5 : 3, 0, Math.PI * 2); c.fill(); });
+  // viewer
+  const p = camera.position;
+  c.fillStyle = sig; c.globalAlpha = 0.18;
+  c.beginPath(); c.moveTo(X(p.x), Z(p.z));
+  c.arc(X(p.x), Z(p.z), (big ? 2.2 : 1.6) * sc, -Math.PI / 2 - yaw - 0.55, -Math.PI / 2 - yaw + 0.55); c.closePath(); c.fill();
+  c.globalAlpha = 1; c.fillStyle = ink;
+  c.beginPath(); c.arc(X(p.x), Z(p.z), big ? 4.5 : 3.5, 0, Math.PI * 2); c.fill();
+}
+
+/* ---------- decoding ---------- */
+function scoreOf(id) {
+  const s = OBJECTS[id].s;
+  const sent = s.notes.reduce((a, n) => a + n.sentiment, 0);
+  const longest = s.fixations.length ? Math.max(...s.fixations) : 0;
+  let sc = s.gaze + 0.35 * s.dwell + 0.8 * s.engaged + 1.2 * s.captures + 0.6 * Math.max(0, s.visits - 1) + 2.5 * sent + 0.3 * longest + (s.minDist < 1.6 ? 1.5 : 0);
+  return Math.max(0.05, sc);
+}
+const REC = {
+  curvature: {
+    pos: { el: ['Arched or radiused openings, head radius ≥ 600 mm', 'Coved junction between wall and ceiling', 'Curved reveals returned in plaster', 'Rounded joinery edges, R 20–40 mm'], mat: ['Lime plaster or tadelakt on the reveals', 'Steam-bent or CNC-curved oak', 'Hot-bent low-iron glass'], con: ['Soft enclosure', 'Biomorphic geometry', 'Light that grades instead of cuts'] },
+    neg: { el: ['Rectilinear openings with crisp 90° arrises', '10 mm shadow-gap reveals', 'Frameless glass corner'], mat: ['Honed limestone or terrazzo sills', 'Blackened steel trims', 'Flat structural-glazed units'], con: ['Precise minimalism', 'Grid and proportion', 'Views framed like pictures'] }
+  },
+  verticality: {
+    pos: { el: ['Tall slot windows rising past door head', 'Clerestory or roof light for a sky view', 'A double-height moment at the entry'], mat: [], con: ['Vertical lift and sky connection'] },
+    neg: { el: ['Ribbon window at seated eye level, 900–1000 mm sill', 'Long window seat or ledge under the band', 'Panoramic corner opening'], mat: [], con: ['Horizon and landscape panorama'] }
+  },
+  frame: {
+    pos: { el: ['Expressed mullions as a graphic grid', 'Deep frames with integrated shelves'], mat: ['Black anodised aluminium or bronze frames, 60–90 mm sightline'], con: ['Framing as ornament'] },
+    neg: { el: ['Concealed or slimline frames, 40 mm or less', 'Glass set straight into plaster reveals'], mat: ['Slim steel sections or structural silicone glazing'], con: ['A boundary that almost disappears'] }
+  },
+  sill: {
+    pos: { el: ['Low or floor-level sills', 'Window seat at 450 mm', 'Glazing that runs down to the floor finish'], mat: [], con: ['Grounded connection to outside'] },
+    neg: { el: ['Raised sills, 1000 mm or more, for privacy and wall space', 'High clerestory bands'], mat: [], con: ['Protected interior, selective view'] }
+  },
+  tint: {
+    pos: { el: [], mat: ['Bronze or grey solar-control glass, VLT 45–60%', 'Fritted or acid-etched glass for filtered light'], con: ['Filtered, warm, shaded light'] },
+    neg: { el: [], mat: ['Low-iron glass with anti-reflective coating, VLT 88% or more', 'Clear laminated glass with no tint'], con: ['Full daylight and true colour'] }
+  }
+};
+
+function decode() {
+  const ws = WINDOWS.map(id => ({ id, o: OBJECTS[id], s: OBJECTS[id].s, score: scoreOf(id) }));
+  const totalGaze = ws.reduce((a, w) => a + w.s.gaze, 0);
+  const allGaze = Object.values(OBJECTS).reduce((a, o) => a + o.s.gaze, 0);
+  const totalCaps = ws.reduce((a, w) => a + w.s.captures, 0);
+  const evidence = totalGaze + 2 * totalCaps + 3 * session.notes.length;
+  const confidence = evidence < 8 ? 'low' : evidence < 25 ? 'med' : 'high';
+  const sumScore = ws.reduce((a, w) => a + w.score, 0);
+  const axes = AXES.map(a => {
+    const v = ws.reduce((acc, w) => acc + w.score * w.o.features[a.key], 0) / sumScore;
+    return { ...a, v: Math.max(-1, Math.min(1, v)) };
+  });
+  const [lead, other] = [...ws].sort((a, b) => b.score - a.score);
+  const why = [];
+  const share = lead.score / sumScore;
+
+  if (totalGaze < 3) {
+    why.push({ text: 'There is not enough looking yet to read a preference. Walk into each ring on the floor and look at each window for a few seconds.', src: `${totalGaze.toFixed(1)} s on windows so far` });
+  } else {
+    why.push({ text: share > 0.58
+      ? `Your attention leaned toward the ${lead.o.name.toLowerCase()}: ${fmt(lead.s.gaze)} of looking against ${fmt(other.s.gaze)}, with ${lead.s.captures} sustained capture${lead.s.captures === 1 ? '' : 's'} against ${other.s.captures}.`
+      : `Your attention was split fairly evenly between the two windows (${fmt(lead.s.gaze)} and ${fmt(other.s.gaze)}). The reading below is tentative; the preference is not strong yet.`,
+      src: `interest score ${lead.score.toFixed(1)} vs ${other.score.toFixed(1)}` });
+    if (isFinite(lead.s.minDist)) {
+      why.push(lead.s.minDist < 1.6
+        ? { text: `You walked to ${lead.s.minDist.toFixed(1)} m from the ${lead.o.name.toLowerCase()}. A close approach usually means interest in the detail (the reveal, the frame edge, the glass) more than the view.`, src: `closest approach ${lead.s.minDist.toFixed(2)} m` }
+        : { text: `You studied the ${lead.o.name.toLowerCase()} from a distance (closest ${lead.s.minDist.toFixed(1)} m). That points to the composition and the light it gives the room, more than its detail.`, src: `closest approach ${lead.s.minDist.toFixed(2)} m` });
+    }
+    const longest = Math.max(0, ...lead.s.fixations);
+    if (longest >= 4) why.push({ text: `Your longest single look was ${longest.toFixed(1)} s at the ${lead.o.name.toLowerCase()}. Looks past about 4 seconds tend to be evaluation rather than orientation.`, src: `${lead.s.fixations.length} fixation${lead.s.fixations.length === 1 ? '' : 's'} ≥ ${CAPTURE_AFTER} s` });
+    ws.forEach(w => { if (w.s.visits >= 2) why.push({ text: `You came back into the ${w.o.name.toLowerCase()} zone ${w.s.visits} times. Returning is a stronger signal than a single long stay.`, src: `${w.s.visits} entries · ${fmt(w.s.dwell)} total dwell` }); });
+    const curv = axes[0].v;
+    if (Math.abs(curv) > 0.2) {
+      const o = curv > 0 ? OBJECTS['W-01'] : OBJECTS['W-02'];
+      why.push({ text: curv > 0
+        ? `What you didn't see: the window you favoured has a semicircular head, a slim 40 mm frame and a low 350 mm sill. Those traits travel together as soft, grounded and open to the sky.`
+        : `What you didn't see: the window you favoured is a sharp rectangle with an 80 mm black frame and a 1000 mm sill. Those traits travel together as framed, controlled and horizon-focused.`,
+        src: `${o.name} · hidden metadata` });
+    }
+  }
+  const floorG = OBJECTS['S-FLOOR'].s.gaze, wallG = OBJECTS['S-WALL'].s.gaze;
+  if (floorG > 4) why.push({ text: `You looked at the floor for ${fmt(floorG)}. In this room that is mostly the sun patches each window throws, so light quality may matter to you as much as the opening itself.`, src: 'S-FLOOR · polished concrete' });
+  if (wallG > 8 && allGaze > 0 && wallG / allGaze > 0.35) why.push({ text: `Walls held ${Math.round(wallG / allGaze * 100)}% of your looking time. The app knows they are smooth lime plaster; a strong surface reading suggests texture and finish deserve attention in the next round.`, src: 'S-WALL · lime plaster, LRV 82' });
+
+  // note decoding: link remarks to hidden metadata
+  const noteWhy = session.notes.map(n => {
+    const o = n.target ? OBJECTS[n.target] : null;
+    const tone = n.sentiment > 0 ? 'positive' : n.sentiment < 0 ? 'negative' : 'neutral';
+    if (!o) return { text: `You said “${n.text}” away from any tagged object.`, src: `${tone} · ${clockFmt(n.t)}`, note: true };
+    const val = k => k === 'Glass' && o.kind === 'window' ? GLASS[n.glass].spec : o.meta[k];
+    const facts = [...new Set(n.cues.map(c => c.attr))].filter(k => val(k)).map(k => `${k.toLowerCase()}: ${val(k)}`);
+    const hidden = facts.length ? ` The app knows its ${facts.join('; ')}. That is the likely trigger.` : '';
+    return { text: `You said “${n.text}” at the ${o.name.toLowerCase()}.${hidden}`, src: `${tone} remark · ${n.source} · ${clockFmt(n.t)}`, note: true };
+  });
+
+  // recommendations
+  const pick = { el: [], mat: [], con: [] };
+  [...axes].sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).forEach(a => {
+    if (Math.abs(a.v) < 0.15) return;
+    const r = REC[a.key][a.v > 0 ? 'pos' : 'neg'];
+    ['el', 'mat', 'con'].forEach(k => r[k].forEach(x => { if (!pick[k].includes(x)) pick[k].push(x); }));
+  });
+  const ax = Object.fromEntries(axes.map(a => [a.key, a.v]));
+  const form = ax.curvature > 0.15 ? 'hot-bent (curved) ' : '';
+  const frame = ax.frame < -0.15 ? 'in a slimline steel or frameless system' : ax.frame > 0.15 ? 'in an expressed dark aluminium frame' : 'in a thermally broken standard frame';
+
+  // Glass taste test: window looking per minute each glass was on show, plus remarks made under it
+  const test = GLASS_IDS.map(id => {
+    const g = session.glass[id], mins = g.time / 60;
+    const rate = g.time >= 8 ? (g.winGaze + 1.2 * g.captures) / mins : null;
+    const score = rate === null ? null : rate + 6 * g.sentiment;
+    return { id, ...GLASS[id], ...g, rate, score };
+  });
+  const tested = test.filter(t => t.score !== null).sort((a, b) => b.score - a.score);
+  let glass;
+  if (tested.length >= 2) {
+    const w = tested[0], r = tested[1];
+    if (w.sentiment > 0 || w.score > r.score * 1.15) {
+      const close = Math.abs(w.rate - r.rate) < 0.15 * Math.max(w.rate, r.rate);
+      glass = { winner: w.id, spec: `${form ? 'Hot-bent ' + w.spec[0].toLowerCase() + w.spec.slice(1) : w.spec}, ${frame}`, vlt: w.vlt + '%',
+        why: `${w.name} came out ahead: ${w.rate.toFixed(0)} s of window looking per minute on show, against ${r.rate.toFixed(0)} s for ${r.name.toLowerCase()}${w.sentiment ? `, with ${w.sentiment > 0 ? 'positive' : 'negative'} remarks while it was in place` : ''}.${close && w.sentiment > 0 ? ' Looking time was close, so your remarks decided it.' : ''} ${w.vlt >= 80 ? 'Keep colour true and daylight high; an anti-reflective coat lets the glass read as an absence.' : w.vlt >= 50 ? 'Filtered, softened light seems to suit this viewer; a frit keeps views while cutting glare.' : 'Warm, dim, shaded light seems to read as comfort; check daylight factor targets before committing.'}` };
+    } else {
+      glass = { winner: null, spec: 'No clear winner between the glasses tested', vlt: '–', why: `${w.name} and ${r.name.toLowerCase()} scored within 15% of each other. Walk longer with each, or add a spoken reaction to each one.` };
+    }
+  } else {
+    glass = { winner: null, spec: 'Run the glass test first', vlt: '–', why: 'Use the Glass widget (or keys 1, 2, 3) to show at least two glasses for 8 seconds or more each while you look around. The app compares how much you look at the windows under each glass.' };
+  }
+  return { why, noteWhy, axes, pick, glass, test, confidence, ws, lead, totalGaze, allGaze };
+}
+
+/* ---------- report ---------- */
+function exportData(d) {
+  return {
+    walk: { duration_s: +session.elapsed.toFixed(1), walked_m: +session.walked.toFixed(1), capture_rule: `${CAPTURE_AFTER}s sustained look while inside a zone` },
+    objects: Object.fromEntries(Object.entries(OBJECTS).map(([id, o]) => [id, {
+      name: o.name, hidden_metadata: o.meta,
+      stats: { attention: +o.s.attn.toFixed(1), gaze_s: +o.s.gaze.toFixed(1), dwell_s: +o.s.dwell.toFixed(1), engaged_s: +o.s.engaged.toFixed(1), captures: o.s.captures, glances: o.s.glances, zone_visits: o.s.visits, fixations_s: o.s.fixations, closest_m: isFinite(o.s.minDist) ? +o.s.minDist.toFixed(2) : null }
+    }])),
+    notes: session.notes.map(n => ({ t: n.t, text: n.text, source: n.source, target: n.target, looking_at: n.lookingAt, zone: n.zone, glass: GLASS[n.glass].name, sentiment: n.sentiment, cues: n.cues.map(c => c.attr) })),
+    glass_test: d.test.map(t => ({ glass: t.name, vlt_pct: t.vlt, shown_s: +t.time.toFixed(1), window_gaze_s: +t.winGaze.toFixed(1), window_captures: t.captures, remarks: t.notes, sentiment: t.sentiment, window_looking_s_per_min: t.rate === null ? null : +t.rate.toFixed(1) })),
+    glass_preferred: d.glass.winner ? GLASS[d.glass.winner].name : null,
+    attention_hotspots: topHeat(12).map(c => ({ object: c.tag, x: +c.x.toFixed(2), y: +c.y.toFixed(2), z: +c.z.toFixed(2), weight: +c.w.toFixed(2) })),
+    inferred_axes: Object.fromEntries(d.axes.map(a => [a.key, +a.v.toFixed(2)]))
+  };
+}
+
+function openReport() {
+  endFixation(); gaze = { tag: null, t: 0, captured: false, dist: 0 };
+  keys.clear();
+  const d = decode();
+  const maxA = Math.max(0.1, ...Object.values(OBJECTS).map(o => o.s.attn));
+  const confLabel = { low: 'Low confidence', med: 'Medium confidence', high: 'High confidence' }[d.confidence];
+  const rows = Object.entries(OBJECTS).sort((a, b) => b[1].s.attn - a[1].s.attn).map(([id, o]) => {
+    const s = o.s, win = o.kind === 'window';
+    return `<tr><td><i>${id}</i>${esc(o.name)}</td><td>${s.attn.toFixed(1)}</td><td>${s.gaze.toFixed(1)}</td><td>${win ? s.dwell.toFixed(1) : '–'}</td><td>${s.captures}</td><td>${s.fixations.length ? Math.max(...s.fixations).toFixed(1) : '–'}</td><td>${win && isFinite(s.minDist) ? s.minDist.toFixed(1) : '–'}</td><td style="width:20%"><div class="bar${win ? ' sig' : ''}"><span style="width:${(s.attn / maxA * 100).toFixed(0)}%"></span></div></td></tr>`;
+  }).join('');
+  const maxRate = Math.max(1, ...d.test.map(t => t.rate || 0));
+  const glassRows = d.test.map(t => `<tr${d.glass.winner === t.id ? ' style="background:var(--signal-soft)"' : ''}><td>${esc(t.name)}${d.glass.winner === t.id ? ' <span class="chip high">preferred</span>' : ''}</td><td>${t.vlt}%</td><td>${t.time.toFixed(0)}</td><td>${t.winGaze.toFixed(1)}</td><td>${t.captures}</td><td>${t.notes ? (t.sentiment > 0 ? '+' : '') + t.sentiment + ' (' + t.notes + ')' : '–'}</td><td>${t.rate === null ? 'not enough' : t.rate.toFixed(0)}</td><td style="width:18%"><div class="bar sig"><span style="width:${t.rate ? (t.rate / maxRate * 100).toFixed(0) : 0}%"></span></div></td></tr>`).join('');
+  const noteRows = session.notes.map(n => `<tr><td style="font-weight:400;font-style:italic">“${esc(n.text)}”</td><td>${clockFmt(n.t)}</td><td>${n.target ? esc(n.target) : 'room'}</td><td>${esc(GLASS[n.glass].name)}</td><td>${n.sentiment > 0 ? '+' + n.sentiment : n.sentiment}</td><td>${n.source}</td></tr>`).join('');
+  const cards = WINDOWS.map(id => {
+    const o = OBJECTS[id], s = o.s;
+    return `<div class="card"><h3>${esc(o.name)}<span class="mono">${id} · score ${scoreOf(id).toFixed(1)}</span></h3><dl class="meta">${Object.entries(o.meta).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>`;
+  }).join('');
+  const whyItems = [...d.why.map(w => ({ ...w })), ...d.noteWhy].map(w => `<li class="${w.note ? 'note' : ''}">${esc(w.text)}<span class="src">${esc(w.src)}</span></li>`).join('');
+  const axes = d.axes.map(a => {
+    const pct = (a.v + 1) / 2 * 100;
+    const fl = a.v >= 0 ? `left:50%;width:${(pct - 50).toFixed(1)}%` : `left:${pct.toFixed(1)}%;width:${(50 - pct).toFixed(1)}%`;
+    return `<div class="axis"><span class="lab${a.v < -0.15 ? ' on' : ''}">${a.neg}</span><div class="track" role="img" aria-label="${a.neg} to ${a.pos}: ${a.v.toFixed(2)}"><span class="fill" style="${fl}"></span><span class="dot" style="left:${pct.toFixed(1)}%"></span></div><span class="lab${a.v > 0.15 ? ' on' : ''}">${a.pos}</span></div>`;
+  }).join('');
+  const list = (title, arr) => `<div class="reclist"><h3>${title}</h3>${arr.length ? `<ul>${arr.slice(0, 5).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="empty">No clear signal yet.</p>'}</div>`;
+
+  $('#report').innerHTML = `<div class="sheet">
+    <div class="rhead">
+      <div><h1>Decoded walk</h1><p class="mono">${fmt(session.elapsed)} walked · ${session.walked.toFixed(1)} m covered · ${session.captures.length} captures · ${session.notes.length} notes &nbsp;<span class="chip ${d.confidence}">${confLabel}</span></p></div>
+      <div class="controls"><button class="btn" id="r-copy">Copy data</button><button class="btn" id="r-new">New walk</button><button class="btn" id="r-heat">See heatmap in room</button><button class="btn primary" id="r-back">Keep walking</button></div>
+    </div>
+    <div class="grid2">
+      <div class="rsec"><h2>Plan <small>path, zones, capture points</small></h2>
+        <div class="planbox"><canvas id="rplan"></canvas><div class="legend"><span><i></i>your path</span><span><i class="z"></i>hit zone</span><span><i class="c"></i>capture</span></div></div></div>
+      <div class="rsec"><h2>Attention <small>attention = centre-weighted seconds; gaze = crosshair only</small></h2>
+        <div class="tablewrap"><table><thead><tr><th>Object</th><th>Attention</th><th>Gaze s</th><th>Dwell s</th><th>Capt.</th><th>Longest s</th><th>Closest m</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        ${d.totalGaze < 3 ? '<p class="notice">Very little window data so far. Close this sheet, walk into both floor rings and look at each window for a few seconds, then decode again.</p>' : ''}
+      </div>
+    </div>
+    <div class="rsec"><h2>Glass taste test <small>window looking per minute each glass was on show</small></h2>
+      <div class="tablewrap"><table><thead><tr><th>Glass</th><th>VLT</th><th>Shown s</th><th>Window gaze s</th><th>Capt.</th><th>Remarks</th><th>s / min</th><th></th></tr></thead><tbody>${glassRows}</tbody></table></div>
+    </div>
+    <div class="rsec"><h2>What the room knew <small>metadata the viewer never saw</small></h2><div class="cards">${cards}</div></div>
+    <div class="rsec"><h2>Your notes <small>${session.notes.length} recorded, typed or spoken</small></h2>
+      ${session.notes.length ? `<div class="tablewrap"><table><thead><tr><th>What you said</th><th>Time</th><th>Linked to</th><th>Glass</th><th>Tone</th><th>Source</th></tr></thead><tbody>${noteRows}</tbody></table></div>` : '<p class="notice">No notes this walk. Type in the bar at the bottom, or press Speak, while looking at something.</p>'}
+    </div>
+    <div class="rsec"><h2>The reading <small>why you looked where you did</small></h2><ul class="why">${whyItems}</ul></div>
+    <div class="rsec"><h2>Preference axes <small>weighted by interest score</small></h2><div class="axes">${axes}</div></div>
+    <div class="rsec"><h2>Suggested direction</h2>
+      <div class="glass"><span class="k">Glass to try next</span><span class="k" style="text-align:right">Target VLT</span><span class="spec">${esc(d.glass.spec)}</span><span class="vlt">${d.glass.vlt}</span><p>${esc(d.glass.why)}</p></div>
+      <div class="grid3">${list('Design elements', d.pick.el)}${list('Concepts', d.pick.con)}${list('Materials', d.pick.mat)}</div>
+    </div>
+    <div class="rsec" id="ai-sec"${sampler ? '' : ' hidden'}><h2>Claude's read <small>a second opinion on the same data</small></h2>
+      <div><button class="btn signal" id="r-ai">Ask Claude to interpret this walk</button></div><div class="ai" id="ai-out" hidden></div></div>
+    <div class="rsec" id="json-sec" hidden><h2>Session data</h2><textarea id="jsonbox" readonly></textarea></div>
+  </div>`;
+  $('#report').hidden = false; $('#report').scrollTop = 0;
+  requestAnimationFrame(() => drawPlan($('#rplan'), true));
+  const data = exportData(d);
+  $('#r-back').onclick = () => { $('#report').hidden = true; };
+  $('#r-new').onclick = () => { newSession(); renderNotes(); camera.position.set(0.6, 1.6, 3.6); yaw = 0.18; pitch = -0.02; $('#report').hidden = true; };
+  $('#r-heat').onclick = () => { setMode(false); setHeat(true); $('#report').hidden = true; toast('Heatmap on · walk around to see where attention landed'); };
+  $('#r-copy').onclick = () => {
+    const txt = JSON.stringify(data, null, 2);
+    const show = () => { $('#json-sec').hidden = false; const b = $('#jsonbox'); b.value = txt; b.focus(); b.select(); };
+    try { navigator.clipboard.writeText(txt).then(() => { $('#r-copy').textContent = 'Copied'; }, show); } catch (e) { show(); }
+  };
+  const ai = $('#r-ai');
+  if (ai) ai.onclick = () => askClaude(data, d);
+}
+$('#decode').onclick = openReport;
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#report').hidden) $('#report').hidden = true; });
+
+function mdLite(t) {
+  const out = []; let inList = false;
+  esc(t).split('\n').forEach(line => {
+    const l = line.trim();
+    if (/^[-*•] /.test(l)) { if (!inList) { out.push('<ul>'); inList = true; } out.push(`<li>${l.slice(2).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</li>`); return; }
+    if (inList) { out.push('</ul>'); inList = false; }
+    if (/^#{1,4} /.test(l)) out.push(`<h4>${l.replace(/^#+ /, '')}</h4>`);
+    else if (l) out.push(`<p>${l.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</p>`);
+  });
+  if (inList) out.push('</ul>');
+  return out.join('');
+}
+let aiAbort = null;
+async function askClaude(data, d) {
+  if (!sampler) return;
+  const out = $('#ai-out'), btn = $('#r-ai');
+  out.hidden = false; out.innerHTML = '<p class="empty">Reading the walk…</p>'; btn.disabled = true;
+  if (aiAbort) aiAbort.abort(); aiAbort = new AbortController();
+  const prompt = `You are a design researcher decoding spatial preference from behaviour, the way an ad platform decodes interest from browsing, but the output is design direction for an architect.
+
+A person walked a minimal monochrome test room (8 × 10 m, 3.2 m high) in first person. It holds two windows and simple furniture (sofa, rug, lamp, dining table and chairs, terrazzo window bench, olive tree). They never saw the hidden metadata below. The glazing of both windows was swapped live between three glasses (low-iron clear VLT 91%, fritted dot VLT 58%, bronze tint VLT 35%); glass_test gives how long each was on show and how much the person looked at the windows under it. "attention" is centre-weighted: the crosshair counts fully, about 6° off-centre counts 0.45, about 13° counts 0.15; attention_hotspots are the strongest 0.2 m cells. A "capture" means a sustained look of ${CAPTURE_AFTER}s or more while standing inside a window's floor zone (radius 1.8 m). Gaze is time the centre of view rested on the object. Notes are things they typed or said, linked to the window they were at.
+
+Session data (JSON):
+${JSON.stringify(data)}
+
+Write a short interpretation for the architect:
+## Reading
+2–3 sentences on where attention went, citing numbers.
+## Why
+3–4 bullets linking behaviour and remarks to specific hidden attributes (geometry, frame, sill, glass VLT, orientation). Separate strong evidence from guesses.
+## Suggestions
+Bullets under three bold labels: **Elements**, **Concepts**, **Materials** (name a specific glass make-up with VLT, using the glass test, and comment on the furniture and finishes that drew attention).
+## Confidence
+One sentence on how much this data can support, and what the next test room should vary to separate the confounded traits.
+
+Use '## ' headings and '- ' bullets only. Under 330 words. Plain, direct language.`;
+  try {
+    const r = await sampler(prompt, { signal: aiAbort.signal, onText: ({ text }) => { out.innerHTML = mdLite(text); } });
+    out.innerHTML = mdLite(r.text);
+  } catch (err) {
+    if (err && err.code === 'not_granted') { $('#ai-sec').hidden = true; }
+    else out.innerHTML = `<p class="err">${esc(err && err.code === 'rate_limited' ? 'Claude is busy right now. Try again in a minute.' : 'Claude could not answer this time. The local reading above still stands.')}</p>`;
+  } finally { btn.disabled = false; btn.textContent = 'Ask again'; }
+}
+
+/* ---------- loop ---------- */
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+let last = performance.now(), uiTimer = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if ($('#report').hidden) {
+    move(dt); track(dt);
+    uiTimer += dt;
+    if (uiTimer > 0.2) { uiTimer = 0; pushHeat(); if (!document.body.classList.contains('subject')) renderPanel(); }
+    updateLabels();
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+camera.rotation.set(pitch, yaw, 0);
+requestAnimationFrame(frame);
+})();
+</script>
