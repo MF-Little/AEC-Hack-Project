@@ -2,10 +2,123 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=gaze-decoder.html">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Gaze Decoder</title>
+<meta name="description" content="Walk an open-plan home; Gaze Decoder records what you look at and decodes window, wall, glass and furniture preferences.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js" } }
+</script>
 </head>
 <body>
-<p><a href="gaze-decoder.html">Open Gaze Decoder</a></p>
+<canvas id="scene" aria-label="First-person view of the open-plan home"></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div class="cross" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="brand"><b>Gaze Decoder</b><span><em id="roomname">Loading</em> · Drag to look · WASD or arrows to walk · Enter to note</span></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="View mode">
+      <button id="m-obs" aria-pressed="true" title="Show what the app tracks">Observer</button>
+      <button id="m-sub" aria-pressed="false" title="Hide tracking and controls for a blind walk">Subject</button>
+    </div>
+    <button class="btn logbtn" id="logbtn">Log</button>
+    <button class="btn primary" id="decode">Decode walk</button>
+  </div>
+</header>
+
+<div id="reviewbar"><span class="rec">Heatmap review · tracking paused · walk around to explore</span><button class="btn primary" id="backreport">Back to report</button></div>
+
+<aside id="panel" aria-label="Observer panel">
+  <div class="ph"><h2>Observer</h2><span class="rec" id="clock">0:00</span></div>
+  <div class="pbody">
+    <div class="sec">
+      <h3>Looking at</h3>
+      <div class="now" id="now"><span class="k">nothing tagged</span></div>
+      <dl class="meta" id="nowmeta"></dl>
+    </div>
+    <div class="sec">
+      <h3>On show · seconds per option</h3>
+      <div id="onshow"></div>
+    </div>
+    <div class="sec">
+      <h3>Areas · time spent</h3>
+      <div id="areas"></div>
+      <p class="hint">Attention heat is recording on a hidden layer. See it in the report.</p>
+    </div>
+    <div class="sec">
+      <h3>Notes</h3>
+      <ul id="notes"><li class="empty">No notes yet. Type below or press Speak.</li></ul>
+    </div>
+    <div class="sec">
+      <h3>Plan · path</h3>
+      <canvas id="plan" style="height:150px"></canvas>
+    </div>
+    <div class="sec">
+      <h3>Event log</h3>
+      <ul id="feed"><li class="empty">Walk into an area and hold your look for 2 seconds.</li></ul>
+    </div>
+  </div>
+</aside>
+
+<form id="notebar" autocomplete="off">
+  <div class="field">
+    <input id="note" type="text" placeholder="Say what you notice… “this feels calm”, “too dark”" aria-label="Note">
+    <button type="button" id="mic" hidden aria-pressed="false" title="Dictate a note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Speak</span>
+    </button>
+  </div>
+  <button class="btn primary" type="submit" id="notebtn">Note</button>
+</form>
+
+<div id="optw" role="group" aria-label="Design options">
+  <div class="gh"><b>Design options</b><span>keys 1–9 · L layout</span></div>
+  <div class="orow"><span class="ok">Walls</span><div class="oseg" id="o-walls"></div></div>
+  <div class="orow"><span class="ok">Glass</span><div class="oseg" id="o-glass"></div></div>
+  <div class="orow"><span class="ok">Furniture</span><div class="oseg" id="o-style"></div></div>
+  <div class="orow2"><button class="btn" id="shuf" type="button">Shuffle layout</button><button class="btn" id="randstyle" type="button">Random style</button></div>
+</div>
+
+<div id="pad" aria-label="Move">
+  <button class="u" data-k="ArrowUp" aria-label="Forward">▲</button>
+  <button class="l" data-k="ArrowLeft" aria-label="Turn left">◀</button>
+  <button class="d" data-k="ArrowDown" aria-label="Back">▼</button>
+  <button class="r" data-k="ArrowRight" aria-label="Turn right">▶</button>
+</div>
+<div id="toast" role="status"></div>
+
+<section id="report" hidden aria-label="Decoded walk"></section>
+
+<div id="start" class="overlay" hidden>
+  <form id="startform" class="startcard" autocomplete="off">
+    <p class="eyebrow" id="startmeta">Open Loft</p>
+    <h1>Before you walk</h1>
+    <p class="task" id="task"></p>
+    <div><label for="pcode">Participant code <span>optional, no names</span></label>
+      <input type="text" id="pcode" maxlength="24" placeholder="e.g. P07"></div>
+    <div class="two">
+      <div><label for="stylesel">Furniture style</label><select id="stylesel"></select></div>
+      <fieldset><legend>Furniture layout</legend>
+        <label class="chk"><input type="radio" name="layout" value="random" checked> Random</label>
+        <label class="chk"><input type="radio" name="layout" value="default"> Default</label>
+      </fieldset>
+    </div>
+    <fieldset>
+      <legend>Eye height</legend>
+      <label class="chk"><input type="radio" name="eye" value="1.6" checked> Standing, 1.6 m</label>
+      <label class="chk"><input type="radio" name="eye" value="1.2"> Seated or wheelchair, 1.2 m</label>
+    </fieldset>
+    <label class="chk"><input type="checkbox" id="autorot"> Auto-rotate walls, glass and furniture style every 20 s (for blind tests in Subject mode)</label>
+    <label class="chk"><input type="checkbox" id="consent"> I agree that this walk records where I look, where I walk, and what I type or say. It is saved on this device only, and no audio is kept.</label>
+    <div class="keys"><b>Drag</b><span>look around</span><b>W A S D / arrows</b><span>walk and turn (Shift to go faster)</span><b>Enter</b><span>add a note about what you're looking at</span><b>1–9, L</b><span>switch walls, glass, style; shuffle the layout</span><b>Decode walk</b><span>see the results and the heatmap</span></div>
+    <button class="btn primary big" type="submit">Start walk</button>
+  </form>
+</div>
+<div id="fatal" hidden></div>
+
+<script type="module" src="src/main.js"></script>
 </body>
 </html>

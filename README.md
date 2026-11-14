@@ -1,82 +1,99 @@
 # Gaze Decoder
 
-Gaze Decoder learns what people respond to in a space and turns it into design direction. It works the way ad platforms read browsing data, but its output is design elements, concepts and materials instead of ads.
+Gaze Decoder learns what people respond to in a space and turns it into design direction. It works the way ad platforms read browsing data, but the output is window, wall, glass and furniture direction.
 
-A viewer walks a minimal 3D room in first person. Every window, surface and piece of furniture carries hidden metadata (geometry, glass type, light transmission, frame, material). The app records what the viewer looks at, how long, from how close, and what they say. It then decodes their preferences and suggests a glass specification and design moves.
+A participant walks an open-plan home in first person. Every window, wall and furniture area carries hidden metadata. The app records what they look at, for how long, and what they say. Meanwhile, wall finish, glass and furniture style are switched around them. It then decodes their preferences.
 
 ## Run it
 
-Open `gaze-decoder.html` in a browser (Chrome works best). No build step and no install. It loads three.js r128 from cdnjs.
-
-To serve it locally:
+The app loads its room from a JSON file, so it needs a local web server (opening `index.html` as a file will not work):
 
 ```bash
 python3 -m http.server 8765
 ```
 
-Then open http://localhost:8765/gaze-decoder.html.
+Open http://localhost:8765 in Chrome. There is no build step. three.js r128 loads from jsDelivr.
 
-Voice dictation and "Ask Claude to interpret this walk" only work when the page runs as a Claude artifact. Outside Claude, those two buttons are hidden and typed notes still work.
-
-## Controls
-
-| Action | Control |
+| Address | What it does |
 | --- | --- |
-| Look around | Drag with the mouse (touch-drag on a phone) |
-| Walk | W A S D or arrow keys; Shift to walk faster |
-| Turn | Left and right arrows, or Q and E |
-| Add a note | Enter, type, Enter (or press Speak in Claude) |
-| Switch glass | Glass widget, or keys 1, 2, 3 |
-| Heatmap on or off | Heatmap button, or H |
-| Hide tracking for a blind test | Subject mode |
-| See the results | Decode walk |
+| `/` | The Open Loft, the default room |
+| `/?room=<name>` | Loads `rooms/<name>.json` |
+| `/?debug=1` | Keeps the loop running in a background tab and exposes state as `window.__gd`, for automated test walks |
+| `/legacy/gaze-decoder-v2.html` | The earlier single-file prototype |
+
+Voice dictation and "Ask Claude" only work when the page runs as a Claude artifact. Elsewhere those buttons stay hidden and typed notes still work.
+
+## The Open Loft
+
+An open-plan home: 16 x 11 m, 3.4 m ceiling, no interior partitions.
+
+- **North side: four rectangular windows. South side: four arched windows.** Both have the same glass area (3.84 m² each), sill, frame and view outside, so shape is the only difference.
+- **Four furniture areas** (living, dining, study, reading nook) sit on four spots, two near each window wall. A kitchen runs along the east wall.
+- **Three switchable variables, three options each:**
+
+| Variable | Options |
+| --- | --- |
+| Wall finish | Lime plaster, oak panelling, board-formed concrete |
+| Glass | Low-iron clear (VLT 91%), fritted dot (58%), bronze tint (35%); daylight in the room follows the VLT |
+| Furniture style | Japanese, Latin, Scandinavian |
+
+- **Shuffle layout** moves the four areas between the spots. The living area might sit by the arched windows in one walk and by the rectangular ones in the next.
+
+## Running a walk
+
+1. The start screen asks for:
+   - a participant code (no names)
+   - the furniture style (or random)
+   - the layout (random or default)
+   - eye height (standing 1.6 m, or seated 1.2 m)
+   - **auto-rotate**, which switches walls, glass and style in turn every 20 s for blind tests
+   - consent
+2. Walk. In Observer mode, the Design options panel switches options (keys 1–9) and shuffles the layout (L). Subject mode hides every control and tracking cue.
+3. Press **Decode walk** for the report.
 
 ## What it captures
 
-- **Gaze:** time the centre of view (the crosshair) rests on each tagged object.
-- **Attention heatmap:** 37 rays per frame. The centre counts fully; rings at about 3°, 7° and 12° count 0.7, 0.35 and 0.12. Hits build up in 0.2 m cells and are painted onto every surface.
-- **Zones:** a 1.8 m floor radius in front of each window, used for dwell time and visits.
-- **Captures:** a look held for 2 s or more while standing inside a zone.
-- **Notes:** typed or spoken remarks. Each is linked to the object being looked at and scored for tone and attribute words.
-- **Glass taste test:** for each of the three glasses (low-iron clear 91% VLT, fritted dot 58%, bronze tint 35%), how long it was shown and how much the viewer looked at the windows while it was in place.
+- **Attention.** 37 rays per frame. The crosshair counts fully; rings at about 3°, 7° and 12° count 0.7, 0.35 and 0.12. The result is normalised to seconds.
+- **The heatmap.** Attention is recorded on its own hidden layer during the walk, so the participant never sees it. The report shows it as a plan and as unrolled north and south wall elevations. **Review heatmap in 3D** lets you walk the room with the heat painted on while tracking is paused.
+- **Exposure.** For each option, how long it was on show and how much attention its element drew in that time (walls for wall finish, windows for glass, furniture for style).
+- **Areas.** Dwell, visits and first-visit order for each furniture area, and time spent on each side of the room.
+- **Captures.** A look held for 2 s or more while standing in an area.
+- **Notes.** Typed or spoken remarks. Each is linked to the element in view, stamped with the options on show, scored for tone and scanned for attribute words.
 
-## The room
+## The report
 
-| Tag | Object |
-| --- | --- |
-| W-01 | Arched window, north wall |
-| W-02 | Ribbon window with sharp corners, east wall |
-| S-WALL, S-FLOOR, S-CEIL | Lime plaster walls, polished concrete floor, concrete soffit |
-| F-SOFA, F-RUG, F-LAMP | Bouclé sofa, wool rug, linen floor lamp |
-| F-TABLE, F-CHAIR | Oak dining table, four ash chairs |
-| F-BENCH, F-PLANT | Terrazzo window bench, potted olive tree |
+- **Profile** and a **glass to specify** with a target VLT.
+- **Four questions**, each with a verdict and a "Your pick" check:
+  - Window shape compares attention share, since both shapes are always on show.
+  - Wall finish, glass and furniture style compare attention per minute on show. An option needs at least 10 s on show to count.
+- **Attention heat:** the plan heatmap and both window walls, unrolled.
+- **Where time went** (areas and sides of the room), the walk path, and attention by element.
+- **The reading**, with the number behind every line, and **suggested** elements, concepts and materials.
+- **Notes**, each with what was on show at the time.
+- **Group results** across every walk saved on this device. Walks can be exported and imported as JSON.
 
-## Report
+## Project structure
 
-The report (Decode walk) includes:
-
-- A plan with the walk path and capture points.
-- An attention table for every object.
-- The glass taste test.
-- The hidden metadata.
-- Every note.
-- Plain-language reasons for the result.
-- Preference axes: sharp ↔ curved, horizontal ↔ vertical, slim ↔ expressed frame, raised ↔ low sill.
-- A suggested glass specification with a target VLT, and design elements, concepts and materials.
-- Copy data, which exports the session as JSON.
-
-## Docs
-
-- `docs/Gaze Decoder - AEC Opportunities.pdf`: use cases, client and designer needs, precedents and a pilot proposal.
-- `docs/Gaze Decoder - Prototype Report.pdf`: what is captured, rules, parameters, variables, decoding logic and critique (written for the first version, before the heatmap, furniture and glass widget).
-- `docs/Hackathon Pitch and Use Cases.md`: pitch line, use cases, judge Q&A and the 3-minute demo script.
+```
+index.html              page markup, start screen, options panel
+styles.css              all styles
+rooms/open-loft.json    room size, window walls, spots, variables and options, metadata, recommendations
+src/
+  main.js               boot, walk lifecycle, review mode, frame loop
+  state.js              shared state, config, session model
+  util.js, storage.js, platform.js
+  scene/                renderer and lights, materials and textures, shell builder, furniture library,
+                        option switching and layout shuffle, heatmap layer
+  tracking/             movement and collision, per-frame tracker, notes
+  decoder/decode.js     the four questions, areas, glass choice, reading, recommendations, export
+  ui/                   observer panel, plan, heat visualisations, event feed, report
+legacy/                 the earlier single-file prototype
+docs/                   reports and pitch notes
+```
 
 ## Limits
 
-This is a hackathon prototype:
-
-- Attention means looking, not liking.
-- The two windows differ in several traits at once.
-- The decoder's weights are hand-set, not fitted to data.
-- Sessions are not saved between visits.
-- Use it to start a conversation with clients, not as a measuring instrument.
+- Attention means looking, not liking. That's why the app pairs it with notes and stated picks.
+- Swapped options are compared across different moments of the walk, so auto-rotate and several participants make the comparison fairer.
+- The decoder's weights are hand-set. Agreement with stated picks is the way to check and tune them.
+- Gaze is the centre of the screen, not real eye tracking.

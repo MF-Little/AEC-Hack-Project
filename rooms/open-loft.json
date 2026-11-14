@@ -1,0 +1,74 @@
+{
+  "id": "open-loft",
+  "name": "Open Loft",
+  "summary": "Open-plan home, 16 x 11 m, 3.4 m ceiling. Rectangular windows on the north side, arched windows on the south side.",
+  "size": { "w": 16, "d": 11, "h": 3.4 },
+  "wallT": 0.3,
+  "start": { "x": -7.1, "z": 0, "yaw": -1.5708 },
+  "task": "Imagine this is your new home. Walk around, find where you would spend a slow Sunday morning, and say what you notice as you go.",
+  "sun": { "pos": [12, 16, 1.5], "shadow": 12 },
+  "facades": {
+    "north": { "id": "W-RECT", "shape": "rect", "w": 1.6, "h": 2.4, "sill": 0.5, "xs": [-6.0, -2.5, 1.0, 4.5] },
+    "south": { "id": "W-CURVE", "shape": "arch", "w": 1.6, "h": 2.57, "sill": 0.5, "xs": [-6.0, -2.5, 1.0, 4.5] }
+  },
+  "objects": {
+    "W-RECT":   { "name": "Rectangular windows", "label": "Rectangular", "kind": "window", "meta": { "Geometry": "Rectangle, sharp 90 degree corners", "Size": "4 no. 1600 x 2400 mm, 3.84 m2 glass each", "Sill": "500 mm", "Frame": "Slim dark steel, 40 mm", "Facing": "North side" } },
+    "W-CURVE":  { "name": "Arched windows", "label": "Arched", "kind": "window", "meta": { "Geometry": "Semicircular head, R 800", "Size": "4 no. 1600 x 2570 mm, 3.84 m2 glass each", "Sill": "500 mm", "Frame": "Slim dark steel, 40 mm", "Facing": "South side" } },
+    "S-WALL":   { "name": "Walls", "kind": "wall", "meta": { "Role": "Perimeter walls; the finish is switchable" } },
+    "S-FLOOR":  { "name": "Floor", "kind": "surface", "meta": { "Material": "Wide-plank pale oak floor" } },
+    "S-CEIL":   { "name": "Ceiling", "kind": "surface", "meta": { "Material": "Plaster ceiling", "Height": "3400 mm" } },
+    "F-LIVING": { "name": "Living area", "label": "Living", "kind": "furniture", "meta": {} },
+    "F-DINING": { "name": "Dining area", "label": "Dining", "kind": "furniture", "meta": {} },
+    "F-STUDY":  { "name": "Study corner", "label": "Study", "kind": "furniture", "meta": {} },
+    "F-NOOK":   { "name": "Reading nook", "label": "Nook", "kind": "furniture", "meta": {} },
+    "F-KITCHEN":{ "name": "Kitchen", "label": "Kitchen", "kind": "furniture", "meta": {} }
+  },
+  "spots": [
+    { "id": "NW", "x": -4.6, "z": -2.7, "face": "N" },
+    { "id": "NE", "x": 0.9,  "z": -2.7, "face": "N" },
+    { "id": "SW", "x": -4.6, "z": 2.7,  "face": "S" },
+    { "id": "SE", "x": 0.9,  "z": 2.7,  "face": "S" }
+  ],
+  "clusters": ["living", "dining", "study", "nook"],
+  "defaultLayout": { "living": "SW", "dining": "NE", "study": "NW", "nook": "SE" },
+  "kitchen": { "zone": { "x": 5.7, "z": 0, "r": 2.0 } },
+  "variables": {
+    "walls": {
+      "name": "Wall finish", "question": "Which wall finish do you prefer?", "applies": "wall", "default": "plaster",
+      "options": {
+        "plaster":  { "name": "Lime plaster", "short": "Plaster", "meta": "Smooth trowelled lime plaster, warm white", "lean": "soft, matte, quiet surfaces",
+                      "recs": { "elements": [], "concepts": ["Soft, matte, quiet surfaces"], "materials": ["Lime plaster or tadelakt walls"] } },
+        "oak":      { "name": "Oak panelling", "short": "Oak", "meta": "Vertical white-oak boards, 120 mm, oiled", "lean": "warm, natural timber",
+                      "recs": { "elements": ["Timber-lined walls or feature panels"], "concepts": ["Warmth and natural materials"], "materials": ["Oiled oak panelling"] } },
+        "concrete": { "name": "Board-formed concrete", "short": "Concrete", "meta": "Board-formed concrete, 150 mm boards", "lean": "raw, honest structure",
+                      "recs": { "elements": ["Exposed structural walls"], "concepts": ["Raw, honest structure"], "materials": ["Board-marked concrete or textured precast"] } }
+      }
+    },
+    "glass": {
+      "name": "Glass", "question": "Which glass do you prefer?", "applies": "window", "default": "clear",
+      "options": {
+        "clear":  { "name": "Low-iron clear", "short": "Clear", "vlt": 91, "meta": "Low-iron laminated 10.76 mm, VLT 91%", "color": "#E4ECEF", "opacity": 0.08, "sun": "#ffffff", "lean": "clear glass and full daylight",
+                    "recs": { "elements": ["Large unobstructed openings"], "concepts": ["Full daylight and true colour"], "materials": ["Low-iron laminated glass with anti-reflective coating, VLT 88% or more"] } },
+        "frit":   { "name": "Fritted dot", "short": "Frit", "vlt": 58, "meta": "Low-iron with 50% white ceramic dot frit, VLT 58%", "color": "#ffffff", "opacity": 1, "sun": "#ffffff", "frit": true, "lean": "filtered light that keeps the view",
+                    "recs": { "elements": ["Graded frit for privacy at eye level"], "concepts": ["Filtered light that keeps the view"], "materials": ["Ceramic dot frit, 40 to 60% coverage, on low-iron glass"] } },
+        "bronze": { "name": "Bronze tint", "short": "Bronze", "vlt": 35, "meta": "Bronze-tint solar-control double glazing, VLT 35%", "color": "#7A6650", "opacity": 0.46, "sun": "#FFD3A0", "lean": "warm, shaded light",
+                    "recs": { "elements": ["Deep reveals or overhangs for shade"], "concepts": ["Warm, shaded, calm light"], "materials": ["Bronze or grey solar-control glass, VLT 35 to 50%"] } }
+      }
+    },
+    "style": {
+      "name": "Furniture style", "question": "Which furniture style do you prefer?", "applies": "furniture", "default": "scandi",
+      "options": {
+        "japanese": { "name": "Japanese", "meta": "Low hinoki and oak pieces, linen, tatami rug, paper lanterns", "lean": "low, calm, crafted living",
+                      "recs": { "elements": ["Low seating and platforms", "Sliding screens to divide space"], "concepts": ["Calm minimalism, close to the floor"], "materials": ["Pale hinoki or oak, linen, washi paper"] } },
+        "latin":    { "name": "Latin", "meta": "Dark walnut, terracotta upholstery, rattan, jute, clay pots", "lean": "warm, earthy, sociable living",
+                      "recs": { "elements": ["Generous sociable seating", "Large planters and clay vessels"], "concepts": ["Warm, earthy, sociable rooms"], "materials": ["Terracotta, rattan, dark walnut, jute"] } },
+        "scandi":   { "name": "Scandinavian", "short": "Scandi", "meta": "Light ash, grey wool, white, slim legs, dome pendants", "lean": "light, airy, simple living",
+                      "recs": { "elements": ["Slim-legged furniture that keeps the floor visible"], "concepts": ["Light, airy simplicity"], "materials": ["Light ash or birch, grey wool, white lacquer"] } }
+      }
+    }
+  },
+  "shapeRecs": {
+    "W-RECT":  { "lean": "crisp, rectangular openings", "recs": { "elements": ["Rectilinear openings with crisp arrises", "Shadow-gap reveals"], "concepts": ["Precise minimalism", "Views framed like pictures"], "materials": ["Flat structural-glazed units"] } },
+    "W-CURVE": { "lean": "curved, soft openings", "recs": { "elements": ["Arched or radiused openings, head radius 600 mm or more", "Curved reveals returned in plaster"], "concepts": ["Soft enclosure", "Biomorphic geometry"], "materials": ["Lime plaster reveals"] } }
+  }
+}
