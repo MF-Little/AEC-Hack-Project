@@ -4,6 +4,12 @@ Visual Vibes learns what people respond to in a space and turns it into design d
 
 A participant walks an open-plan home in first person. Every window, wall and furniture area carries hidden metadata. The app records what they look at, for how long, and what they say. Meanwhile, wall finish, glass and furniture style are switched around them. It then decodes their preferences.
 
+## Demo video
+
+[![A frame from the demo: numbered remark pins and heat on the curtain wall](docs/demo/visual-vibes-demo-poster.jpg)](docs/demo/visual-vibes-demo.mp4)
+
+[`docs/demo/visual-vibes-demo.mp4`](docs/demo/visual-vibes-demo.mp4) (1 min 58 s) follows one client session in the Glazing Study, from consent to the decoded glass spec and the 3D heat map with a pin where each remark was made. It was recorded from the real app in headless Chrome. The client is scripted: their remarks are typed in through a stand-in for the browser's speech recognition, since headless Chrome has no microphone.
+
 ## Run it
 
 The app loads its room from a JSON file, so it needs a local web server (opening `index.html` as a file will not work):
