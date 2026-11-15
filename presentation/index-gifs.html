@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visual Vibes deck · with the demo walk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+* { margin: 0 } body { background: #2A2B2D; font: 32px/1.2 sans-serif; padding: 16px 0; }
+.slot { overflow: hidden; margin: 0 auto 24px; box-shadow: 0 4px 24px rgba(0,0,0,.4); }
+.wrap { width: 1920px; height: 1080px; transform-origin: 0 0; }
+.wrap > section { width: 1920px; height: 1080px; overflow: hidden; box-sizing: border-box; position: relative; isolation: isolate; }
+aside { display: none }
+table { border-collapse: separate; border-spacing: 0; } th, td { padding: .35em .6em; text-align: left; }
+</style>
+<style>/* Gaze Decoder deck: the app's own look. Paper and ink, one signal blue for what the app sees,
+   one warm tone for negative remarks. Archivo for words, IBM Plex Mono for data. */
+section {
+  --ink: #1C1D1B; --paper: #F2F0EB; --card: #FAF9F6; --mute: #5E5C56; --rule: #CFCCC4;
+  --signal: #3651C9; --signal-soft: #E1E5F5; --warm: #9A5B2E; --dark: #17181A; --onDark: #E9E7E1; --onDarkMute: #A9A69E;
+  background: var(--paper); color: var(--ink);
+  font-family: 'Archivo', Arial, sans-serif;
+  padding: 128px 128px 160px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 40px;
+  counter-increment: page;
+}
+h1 { font-size: 160px; font-weight: 800; line-height: 0.95; letter-spacing: -2px; margin: 0; }
+h2 { font-size: 72px; font-weight: 700; line-height: 1.05; letter-spacing: -1px; margin: 0; }
+h3 { font-size: 32px; font-weight: 700; line-height: 1.2; margin: 0; }
+p { font-size: 32px; line-height: 1.35; margin: 0; color: var(--mute); }
+.eyebrow { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; letter-spacing: 3px; text-transform: uppercase; color: var(--signal); }
+.mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
+.foot { position: absolute; left: 128px; bottom: 64px; width: 1664px; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: var(--mute); }
+.dark { background: var(--dark); color: var(--onDark); }
+.dark p { color: var(--onDarkMute); }
+.dark .foot { color: var(--onDarkMute); }
+
+/* cover */
+.cover { padding: 0; background: var(--dark); }
+.cover .bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+.cover .shade { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: linear-gradient(90deg, rgba(23,24,26,0.86) 0%, rgba(23,24,26,0.55) 42%, rgba(23,24,26,0) 72%); }
+.cover .cv { position: absolute; left: 128px; top: 300px; width: 1000px; display: flex; flex-direction: column; gap: 36px; }
+.cover h1 { color: #F6F4EF; }
+.cover .lede { font-size: 44px; line-height: 1.25; color: #E2DFD8; }
+.cover .eyebrow { color: #9FB0F0; }
+.cover .credit { position: absolute; left: 128px; bottom: 72px; width: 1100px; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: #C9C6BF; }
+
+/* three statement cards */
+.cards3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+.card { background: var(--card); border: 2px solid var(--rule); padding: 40px; display: flex; flex-direction: column; gap: 18px; }
+.card.key { border-color: var(--signal); background: var(--signal-soft); }
+.card .k { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--mute); }
+.card.key .k { color: var(--signal); }
+.card .t { font-size: 36px; line-height: 1.3; color: var(--ink); }
+
+/* image + steps */
+.split { display: grid; grid-template-columns: 960px 1fr; gap: 64px; align-items: center; flex: 1; }
+.shot { width: 960px; height: 540px; object-fit: cover; border-radius: 4px; }
+.steps { display: flex; flex-direction: column; gap: 28px; }
+.step { display: grid; grid-template-columns: 64px 1fr; gap: 20px; align-items: start; }
+.step .n { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 32px; color: var(--signal); }
+.step h3 { margin-bottom: 6px; }
+.step p { font-size: 26px; line-height: 1.35; }
+
+/* glass grid */
+.vgrid { display: grid; grid-template-columns: 500px 1fr; gap: 56px; flex: 1; }
+.vgrid .lead { display: flex; flex-direction: column; gap: 32px; }
+.g4 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px; }
+.g4 .gi { display: flex; flex-direction: column; gap: 10px; }
+.g4 img { width: 540px; height: 290px; object-fit: cover; border-radius: 4px; }
+.g4 .gl { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: var(--ink); }
+
+/* metadata numbers */
+.meta { display: grid; grid-template-columns: 1fr 1fr 1fr 1.55fr; gap: 24px; flex: 1; }
+.num { background: var(--card); border: 2px solid var(--rule); padding: 36px; display: flex; flex-direction: column; gap: 16px; }
+.num .big { font-size: 120px; font-weight: 800; line-height: 1; color: var(--signal); }
+.num p { font-size: 26px; line-height: 1.35; }
+.rec { background: var(--dark); padding: 36px; display: flex; flex-direction: column; gap: 14px; }
+.rec .k { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: #9FB0F0; }
+.rec .q { font-size: 32px; font-style: italic; color: #F6F4EF; line-height: 1.3; }
+.rec .f { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; line-height: 1.45; color: var(--onDark); }
+.rec .f .lab { color: var(--onDarkMute); }
+
+/* result */
+.answer { display: flex; flex-direction: column; gap: 18px; }
+.answer .made { font-size: 30px; color: var(--onDarkMute); }
+.chips { display: flex; gap: 14px; flex-wrap: wrap; }
+.chip { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 26px; padding: 10px 18px; border: 2px solid #3A3D44; color: var(--onDark); border-radius: 4px; }
+.chip.on { border-color: #9FB0F0; color: #F6F4EF; background: #24305E; }
+.rtable { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 26px; color: var(--onDark); width: 1664px; }
+.rtable .hl { background: #24305E; }
+.why { font-size: 28px; color: var(--onDarkMute); }
+
+/* facade */
+.elev { width: 1664px; height: 400px; object-fit: contain; background: var(--card); border: 2px solid var(--rule); }
+.stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+.stat { display: flex; flex-direction: column; gap: 6px; border-top: 4px solid var(--signal); padding-top: 16px; }
+.stat .v { font-size: 48px; font-weight: 800; color: var(--ink); line-height: 1.05; }
+.stat p { font-size: 26px; }
+
+/* remarks */
+.cmap { display: grid; grid-template-columns: 760px 1fr; gap: 64px; flex: 1; align-items: start; }
+.cmap img { width: 760px; height: 530px; object-fit: contain; background: var(--card); border: 2px solid var(--rule); }
+.quotes { display: flex; flex-direction: column; gap: 26px; }
+.qt { display: grid; grid-template-columns: 52px 1fr; gap: 18px; }
+.pin { width: 44px; height: 44px; border-radius: 22px; background: var(--ink); color: #F6F4EF; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+.pin.p { background: var(--signal); } .pin.n { background: var(--warm); }
+.qt .qq { font-size: 30px; font-style: italic; color: var(--ink); line-height: 1.3; }
+.qt .qm { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: var(--mute); }
+
+/* next */
+.rows { display: flex; flex-direction: column; flex: 1; }
+.row { display: grid; grid-template-columns: 520px 1fr; gap: 48px; padding: 30px 0; border-top: 2px solid var(--rule); align-items: baseline; }
+.row h3 { font-size: 40px; }
+.row p { font-size: 30px; }
+
+/* screenshot slides: a framed capture beside a short column of points or numbers */
+.row2 { display: flex; gap: 56px; align-items: flex-start; }
+.frame { background: var(--card); border: 2px solid var(--rule); padding: 16px; box-sizing: border-box; flex: none; }
+.frame img { display: block; object-fit: contain; }
+.notes { display: flex; flex-direction: column; gap: 28px; flex: 1; }
+.notes h3 { margin-bottom: 8px; }
+.notes p { font-size: 26px; line-height: 1.35; }
+.bigs { display: flex; flex-direction: column; gap: 24px; flex: 1; }
+.bigs .stat .v { font-size: 44px; }
+.bigs .stat p { font-size: 24px; }
+.shot2 { width: 1040px; height: 585px; object-fit: cover; border-radius: 4px; flex: none; }
+.panelimg { border: 2px solid var(--rule); background: #F5F4F0; object-fit: contain; flex: none; }
+.rules { display: flex; flex-direction: column; gap: 16px; }
+.rules h3 { color: var(--signal); margin-bottom: 6px; }
+.rules p { font-size: 26px; line-height: 1.35; }
+.cap { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; line-height: 1.35; color: var(--mute); }
+.side { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+.side img { width: 600px; height: 337px; object-fit: cover; border-radius: 4px; }
+/* GIFs from the recorded demo walk */
+figure { margin: 0; }
+.gfig { display: flex; flex-direction: column; gap: 12px; }
+.gpair { display: grid; grid-template-columns: 820px 820px; gap: 24px; }
+.gpair img { width: 820px; height: 461px; object-fit: cover; border-radius: 4px; display: block; }
+.wide { width: 1662px; height: 585px; object-fit: cover; border-radius: 4px; flex: none; }
+.vlt { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; line-height: 1.6; color: var(--ink); }
+</style>
+</head><body>
+<div class="slot"><div class="wrap"><section id="cover" class="cover" data-transition="fade">
+<img class="bg" src="images/facade-close.jpg" alt="The glazing study’s unitized curtain wall seen from the garden, with the Latin-furnished living room behind it">
+<div class="shade"></div>
+<div class="cv">
+<p class="eyebrow">AEC hackathon · glazing and life safety</p>
+<h1>Visual Vibes</h1>
+<p class="lede">Watch how people look at a building.<br>Specify what works for them.</p>
+</div>
+<p class="credit">Rendered live in the browser · every pane, mullion and sofa carries its own metadata</p>
+<aside>Visual Vibes turns how people look at and talk about a space into a glass specification. Everything on these slides comes from the working prototype: the renders are the app itself, and the numbers are from one recorded demo walk.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="problem">
+<p class="eyebrow">The problem</p>
+<h2>The costliest facade choice<br>is made from renders.</h2>
+<div class="cards3">
+<div class="card"><p class="k">Today</p><p class="t">Glazing is picked from a render, a sample and the loudest voice in the meeting.</p></div>
+<div class="card"><p class="k">Missing</p><p class="t">Evidence of what future occupants actually look at, and what they say while looking.</p></div>
+<div class="card key"><p class="k">Visual Vibes</p><p class="t">A short first-person walk that ties every steady look and remark to the exact glass on show.</p></div>
+</div>
+<p class="foot">Visual Vibes · glazing study</p>
+<aside>Glass is expensive, long-lead and hard to change once installed, yet it is usually chosen from images and opinions. Visual Vibes adds behavioural evidence from the people who will use the space.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="how">
+<p class="eyebrow">How it works</p>
+<div class="split">
+<figure class="gfig"><img class="shot" src="gifs/walk-look.gif" alt="Recorded demo walk: walking into the apartment, turning to the curtain wall and holding the look until it is captured"><figcaption class="cap">From the recorded demo walk · about real time</figcaption></figure>
+<ol class="steps" style="list-style:none;padding:0;margin:0">
+<li class="step"><p class="n">01</p><div><h3>Walk</h3><p>A first-person walk through a real apartment, in the browser. No install.</p></div></li>
+<li class="step"><p class="n">02</p><div><h3>Look</h3><p>Only steady looks count: turning under 20°/s, moving under 0.6 m/s.</p></div></li>
+<li class="step"><p class="n">03</p><div><h3>Link</h3><p>Every pane, mullion and sofa is tagged with its IFC class and specification.</p></div></li>
+<li class="step"><p class="n">04</p><div><h3>Specify</h3><p>The report names the glass, with its make-up, VLT and g-value.</p></div></li>
+</ol>
+</div>
+<p class="foot">Visual Vibes · glazing study</p>
+<aside>The clip is the start of the recorded demo walk: the walker steps into the dining area, turns to the curtain wall and holds the look, and the app confirms the capture. Sweeping across big walls while walking is ignored, so large surfaces can’t win just by being big. What remains is deliberate looking, linked to the object and the product on show.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="variable">
+<p class="eyebrow">The test</p>
+<div class="vgrid">
+<div class="lead">
+<h2>Same windows.<br>Only the glass changes.</h2>
+<p>Four products swap on both facades at once, every 20 seconds. The walker never touches a control.</p>
+<p>Because the geometry never changes, size can’t bias the result.</p>
+<p class="vlt">VLT · clear 76% · neutral 60%<br>frit 45% · bronze 32%</p>
+</div>
+<div class="g4">
+<div class="gi"><img src="gifs/swap-auto.gif" alt="Observer view: the glass auto-rotates from low-iron clear to neutral solar control"><p class="gl">Clear → neutral · observer view</p></div>
+<div class="gi"><img src="gifs/swap-blind.gif" alt="Subject view: the walker drifts along the wall and the glass turns from neutral to bronze with nothing on screen"><p class="gl">Neutral → bronze · subject view</p></div>
+<div class="gi"><img src="gifs/swap-frit.gif" alt="The glass turns from bronze to fritted dot, then the facade is seen from the garden"><p class="gl">Bronze → frit · then the garden</p></div>
+<div class="gi"><img src="gifs/swap-clear.gif" alt="The fritted dots vanish as the glass returns to low-iron clear mid-look"><p class="gl">Frit → clear · mid-look</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · four real swaps from one recorded walk, sped up 1 to 3×</p>
+<aside>Four moments from one recorded demo walk where auto-rotate swapped the glass: clear to neutral in the observer view; neutral to bronze in subject view, where nothing on screen says it happened; bronze to frit, then the facade seen from the garden; and frit back to clear while the walker looks along the wall. Daylight in the room follows each product’s light transmission. Walls and furniture stay fixed, so glass is the only thing that changes.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="metadata">
+<p class="eyebrow">The metadata</p>
+<h2>Every element knows what it is.</h2>
+<div class="meta">
+<div class="num"><p class="big">13</p><p>properties per glass product: make-up, coating, VLT, g-value, U-value, Ra, reflectance, Rw, thickness, weight, cost, carbon, lead time</p></div>
+<div class="num"><p class="big">22</p><p>curtain-wall panels tracked one by one, from inside and from the garden: 11 modules × vision and high-light</p></div>
+<div class="num"><p class="big">10</p><p>design traits on every element, from curved geometry to privacy, plus IFC class, Uniclass and spec section</p></div>
+<div class="rec">
+<p class="k">One remark, as recorded</p>
+<p class="q">“too dark and brown, gloomy”</p>
+<p class="f"><span class="lab">stood at</span> x 2.6, z 1.2 · heading 167°<br><span class="lab">eye height</span> 1.6 m<br><span class="lab">looking at</span> curtain wall, 4.6 m away<br><span class="lab">glass on show</span> bronze tint<br><span class="lab">its spec</span> VLT 32% · g 0.28 · Ra 82<br><span class="lab">tone</span> −2 · counted against bronze</p>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study</p>
+<aside>The app knows the building in BIM terms, and records behaviour against those same terms. A remark isn’t just text: it is pinned to a position, a direction, a point on a specific panel, and the product that was in place at that moment.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="live">
+<p class="eyebrow">During the walk</p>
+<h2>Every look lands on a spec</h2>
+<div class="row2" style="gap:48px">
+<img class="wide" src="gifs/look-spec.gif" alt="Observer view from the recorded demo walk: the walker turns to the curtain wall, the look is captured, and the panel shows the element in view with its system, module, transom, frame and glass">
+</div>
+<p class="foot">Visual Vibes · glazing study · Observer mode, recorded demo walk at about real time</p>
+<aside>This is the Observer view while someone walks. As the look settles on the curtain wall, the app captures it, and the panel shows the element in view with its metadata: the unitized system, the 1455 mm module, the transom at 2.7 m, the frame and the glass on show. The participant sees none of this in Subject mode.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="result" class="dark">
+<p class="eyebrow" style="color:#9FB0F0">One demo walk · 2 min 10 s · 7 remarks · verdict: leaning</p>
+<div class="answer">
+<h2>Specify: neutral solar control</h2>
+<p class="made">6 mm solar-control toughened / 16 mm argon / 6.8 mm laminated · triple-silver coating · 08 81 00</p>
+<div class="chips"><p class="chip on">VLT 60%</p><p class="chip on">g 0.33</p><p class="chip">U 1.0 W/m²K</p><p class="chip">Ra 94</p><p class="chip">Rw 36 dB</p></div>
+</div>
+<table class="rtable">
+<tr><th style="width:28%">This walk</th><th style="width:18%">Low-iron clear</th><th style="width:18%">Neutral</th><th style="width:18%">Fritted dot</th><th style="width:18%">Bronze tint</th></tr>
+<tr><td>Steady looking</td><td>49.3 s/min</td><td>40.7 s/min</td><td>50.2 s/min</td><td>45.1 s/min</td></tr>
+<tr><td>Time on show</td><td>40 s</td><td>20 s</td><td>40 s</td><td>30 s</td></tr>
+<tr><td>Remarks</td><td>0 (3)</td><td>+2 (1)</td><td>−2 (2)</td><td>−2 (1)</td></tr>
+<tr class="hl"><td>Share of preference</td><td>31%</td><td>39%, chosen</td><td>16%</td><td>14%</td></tr>
+</table>
+<p class="why">Looked at a little less than clear or fritted glass, but the only glass spoken of warmly. Each remark point moves a glass’s score by 25%.</p>
+<p class="foot">Visual Vibes · glazing study</p>
+<aside>A single scripted demo walk recorded in the prototype, so read it as a lead, not a result. The answer card takes every value from the chosen product’s own metadata. A real study runs 8 to 12 people and checks the decoded choice against each person’s stated pick.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="spec">
+<p class="eyebrow">Decode walk · spec sheet</p>
+<h2>The answer arrives with its product data</h2>
+<div class="row2">
+<div class="frame" style="width:895px;height:604px"><img src="images/report-spec-sheet.png" alt="Glass options side by side: how this person responded, then each product's make-up, coating, VLT, g-value, U-value, Ra, reflectance, Rw, thickness, weight, cost, carbon and lead time" style="width:863px;height:572px"></div>
+<div class="notes">
+<div><h3>How this person responded</h3><p>Steady looking, time on show, remarks and share of preference for each glass.</p></div>
+<div><h3>From the product metadata</h3><p>Make-up, coating, VLT, g-value, U-value, Ra, reflectance, Rw, thickness and weight.</p></div>
+<div><h3>Beside the preference</h3><p>Cost index, embodied carbon and lead time, so the trade-off sits on one sheet.</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · report</p>
+<aside>The preferred column is highlighted. The top block is behaviour from the walk; the bottom block is read straight from each glass product's metadata, so the answer can go into a specification without re-typing.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="explorer">
+<p class="eyebrow">Decode walk · glass explorer</p>
+<h2>Any property against attention</h2>
+<div class="row2">
+<div class="frame" style="width:1020px;height:604px"><img src="images/report-glass-explorer.png" alt="Scatter of embodied carbon against attention per minute on show, one dot per glass on each facade, coloured by remark tone, with a trend line" style="width:988px;height:572px"></div>
+<div class="notes">
+<div><h3>Pick a field</h3><p>VLT, g-value, cost, carbon, lead time, or any of the ten design traits.</p></div>
+<div><h3>Like with like</h3><p>Each dot is one glass on one facade. The geometry never changes, so size can’t win.</p></div>
+<div><h3>A lead, not a verdict</h3><p>r shows the trend across elements. One walk is a lead to test with more people.</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · report</p>
+<aside>Here the field is embodied carbon. Dots are coloured by the tone of remarks: blue positive, orange negative. The same chart works for any number in the metadata.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="dna">
+<p class="eyebrow">Decode walk · design DNA</p>
+<h2>What drew the eye, trait by trait</h2>
+<div class="row2">
+<div class="frame" style="width:1030px;height:604px"><img src="images/report-design-dna.png" alt="Design DNA: plain-language findings above bars for ten traits, sought out versus in view, with positive and negative remark weights" style="width:998px;height:572px"></div>
+<div class="notes">
+<div><h3>Ten traits per element</h3><p>From curved geometry to privacy, scored 0 to 1 in the metadata.</p></div>
+<div><h3>Sought out vs in view</h3><p>Bars right of centre: the person centred their view on that trait more than it surrounded them.</p></div>
+<div><h3>Remarks by trait</h3><p>Each remark is weighted by how strongly the element in view carries the trait.</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · report</p>
+<aside>Design DNA turns object-level looking into design language. In this walk the strongest elements shared brightness and daylight, and minimal, quiet detailing.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="facade">
+<p class="eyebrow">The facade, module by module</p>
+<h2>Where on the curtain wall people look</h2>
+<div class="row2">
+<div class="frame" style="width:1181px;height:604px"><img src="images/report-facade-heat.png" alt="The south curtain wall unrolled with attention heat, then bars per module from inside and from outside, strongest on modules 4 to 6" style="width:1149px;height:572px"></div>
+<div class="bigs">
+<div class="stat"><p class="v">M05 · 20.6 s</p><p>most-looked module</p></div>
+<div class="stat"><p class="v">2%</p><p>of looking went above the 2.7 m transom</p></div>
+<div class="stat"><p class="v">62.8 s · 6.9 s</p><p>steady looking from inside, and from the garden</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · report</p>
+<aside>Each pane carries its module number, so attention reads like a facade drawing. Almost all looking went to the vision panels; the high-lights above the transom barely registered, a hint for where frit or tint could go without being noticed.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="remarks">
+<p class="eyebrow">The remarks</p>
+<h2>Every remark is pinned where it was said</h2>
+<div class="gpair">
+<figure class="gfig"><img src="gifs/voice-note.gif" alt="A remark is spoken: the words appear in the note bar and become note 1, tied to the curtain wall and the low-iron clear glass"><figcaption class="cap">Said while looking: the words become a note tied to what was in view and the glass on show · 1.25×</figcaption></figure>
+<figure class="gfig"><img src="gifs/pins-3d.gif" alt="The 3D review: stepping back from the wall to see five numbered remark pins where they were said, in front of the heat on the curtain wall"><figcaption class="cap">The 3D review: each numbered pin stands where its remark was made, in front of the heat · up to 2×</figcaption></figure>
+</div>
+<p class="foot">Visual Vibes · glazing study · recorded demo walk</p>
+<aside>Each remark records where the person stood, which way they faced, the exact point they were looking at and how far away it was, the glass on show at that moment, and a tone score. In the recorded walk the five remarks were made at five spots along the curtain wall, so the review shows five pins, blue for warm remarks and orange for negative ones. The report's comment map shows the same pins on the plan.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="schedule">
+<p class="eyebrow">Decode walk · element schedule</p>
+<h2>A BIM schedule with behaviour in it</h2>
+<div class="row2">
+<div class="frame" style="width:900px;height:604px"><img src="images/report-element-schedule.png" alt="Element schedule rows for each curtain-wall glass and the north windows: IFC class, Uniclass and spec section, key properties, time shown, attention, captures, remarks and a preference bar" style="width:868px;height:572px"></div>
+<div class="notes">
+<div><h3>Classified</h3><p>IFC class, Uniclass code and spec section for every element as seen.</p></div>
+<div><h3>Specified</h3><p>Key properties straight from the metadata: make-up, coating, VLT, g, U and Ra.</p></div>
+<div><h3>Measured</h3><p>Time on show, attention, captures, remarks and a preference index. Exports as CSV.</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · glazing study · report</p>
+<aside>The schedule speaks the BIM team's language, so the result can go back into the model as parameters rather than as a slide.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress" class="cover" data-transition="fade">
+<img class="bg" src="images/egress-collapse.jpg" alt="Stock falling off pallet racking across an aisle, with dust, beside a goods lift">
+<div class="shade"></div>
+<div class="cv">
+<p class="eyebrow">Second study · life safety</p>
+<h1>Factory<br>Egress</h1>
+<p class="lede">Same engine, a harder question: can people find their way out?</p>
+</div>
+<p class="credit">Night shift · alarm · falling stock · power cut · every exit sign carries its own metadata</p>
+<aside>The second study reuses the whole engine: tagged elements, steady-look tracking, pinned remarks and the heat layer. The question changes from preference to performance: did people get out, how fast, and which signs actually helped.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-setup">
+<p class="eyebrow">Factory egress · the spawn</p>
+<h2>The farthest point from every exit</h2>
+<div class="row2">
+<div class="frame" style="width:912px;height:604px"><img src="images/egress-distance-field.png" alt="Walking-distance field over the factory plan: light near the three exits, dark far away, with 5 m contours and the four farthest spawn points circled" style="width:880px;height:572px"></div>
+<div class="bigs">
+<div class="stat"><p class="v">29.8 m</p><p>on foot to the nearest exit from this spawn</p></div>
+<div class="stat"><p class="v">3 exits · 5 decoys</p><p>two stairs and an external door; a lift, two shutters, an office and a sealed exit</p></div>
+<div class="stat"><p class="v">14 signs</p><p>illumination, size, mounting and rated viewing distance on each</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · factory egress · walking distance on a 0.25 m grid, lighter is closer to an exit</p>
+<aside>A floor grid gives the walking distance from every point to the nearest exit, around racking and machines. Each run starts at one of the farthest open spots, facing a random direction, so nobody can memorise the way out.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-pressure">
+<p class="eyebrow">Factory egress · the scenario</p>
+<div class="vgrid">
+<div class="lead">
+<h2>Pressure, one switch at a time</h2>
+<p>An alarm and a shake start the run. Stock then falls a few metres ahead on the walker’s own shortest route, always leaving another way out.</p>
+<p>Camera shake has its own switch for anyone prone to motion sickness.</p>
+</div>
+<div class="g4">
+<div class="gi"><img src="images/egress-collapse.jpg" alt="Stock falling across the aisle"><p class="gl">Stock falls onto your route</p></div>
+<div class="gi"><img src="images/egress-power-cut.jpg" alt="Racking aisle in a power cut with a lit exit sign"><p class="gl">Power cut: emergency light only</p></div>
+<div class="gi"><img src="images/egress-smoke.jpg" alt="Smoke in a dark aisle with a hanging exit sign"><p class="gl">Smoke builds up</p></div>
+<div class="gi"><img src="images/egress-sealed-door.jpg" alt="A former exit door barred shut with a NO EXIT sign"><p class="gl">Decoys: sealed exit, lift, shutters</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · factory egress</p>
+<aside>Each hazard is a switch on the start screen. Lit signs stay readable in the power cut; unlit and photoluminescent ones fade, and smoke thins every sign by distance, so the same layout can be tested under different conditions.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-signs">
+<div class="row2" style="flex:1">
+<div style="display:flex;flex-direction:column;gap:32px;flex:1">
+<p class="eyebrow">Factory egress · the signs</p>
+<h2>Every sign is judged on what people did</h2>
+<div class="rules">
+<div><h3>In view</h3><p>On screen, facing you, nothing in between, and enough light and clear air for its type.</p></div>
+<div><h3>Readable</h3><p>Within its rated distance: Z factor × sign height, 200 for lit signs and 100 otherwise.</p></div>
+<div><h3>Looked at</h3><p>Held within 3° of the centre of view for a quarter of a second, view steady.</p></div>
+<div><h3>Followed</h3><p>Within 4 s, moved the way it points, or towards its door.</p></div>
+</div>
+</div>
+<img class="panelimg" src="images/egress-live-panel.png" alt="Observer panel during a run: nearest exit 24.4 m on foot, hesitating, aisle blocked and power cut, looking at sign SG-05 with its pictogram, standard, colour, illumination, battery duration and size" style="width:590px;height:780px">
+</div>
+<p class="foot">Visual Vibes · factory egress · Observer mode, live</p>
+<aside>The panel is captured mid-run: the walker is hesitating 24 m from the nearest exit, after the aisle was blocked and the power was cut, and is looking at hanging sign SG-05. Its metadata comes straight from the sign's record.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-run">
+<p class="eyebrow">Factory egress · one run, decoded</p>
+<h2>The route against the shortest one</h2>
+<div class="row2">
+<div class="frame" style="width:836px;height:604px"><img src="images/egress-route-map.png" alt="Route map: walked path in blue against the shortest route in green, a hatched blockage, hesitation circles, wrong-turn crosses, numbered remark pins and sign triangles" style="width:804px;height:572px"></div>
+<div class="bigs">
+<div class="stat"><p class="v">Out in 1:02</p><p>by Stair B, after the aisle was blocked</p></div>
+<div class="stat"><p class="v">56% efficient</p><p>82 m walked against a best possible 46 m</p></div>
+<div class="stat"><p class="v">3 wrong turns</p><p>37 m of detours, 11 s inside the dead end</p></div>
+<div class="stat"><p class="v">1 wrong door</p><p>tried the goods lift during the power cut</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · factory egress · one scripted demo run</p>
+<aside>A scripted demo run that behaves like a hesitant participant: it watches the stock fall, tries the lift, walks into the dead-end aisle, then follows a hanging sign to Stair B. Read it as a demonstration of what is recorded, not as a study result.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-signtable">
+<p class="eyebrow">Factory egress · sign audit</p>
+<h2>Every sign gets a verdict</h2>
+<div class="row2">
+<div class="frame" style="width:1112px;height:604px"><img src="images/egress-sign-table.png" alt="Sign table: each of the 14 signs with type, mounting, rated distance, time in view, readable and looked at, first-look distance, followed, an arrow check and a verdict" style="width:1080px;height:572px"></div>
+<div class="notes">
+<div><h3>Worked</h3><p>SG-14, a lit hanging sign: looked at from 4.7 m, then followed east.</p></div>
+<div><h3>Missed</h3><p>SG-08, low-level photoluminescent, and SG-13: readable, never looked at.</p></div>
+<div><h3>Wrong</h3><p>SG-09, a superseded text sign, points west. The shortest route heads north-east.</p></div>
+</div>
+</div>
+<p class="foot">Visual Vibes · factory egress · report</p>
+<aside>The arrow column is an automatic audit: for every directional sign, the walking-distance grid's shortest route is compared with the arrow. More than 60 degrees apart is flagged, whether or not anyone walked past it.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="egress-findings">
+<p class="eyebrow">Factory egress · findings</p>
+<h2>The report says what to fix</h2>
+<div class="row2">
+<div class="frame" style="width:1008px;height:604px"><img src="images/egress-findings.png" alt="Findings list: exit and route, time at the spawn, signs that changed the route, signs readable but never looked at, the lift tried, the blockage and re-route, the power cut, the longest blind stop and the dead end" style="width:976px;height:572px"></div>
+<div class="side">
+<img src="images/egress-dead-end.jpg" alt="A superseded EXIT sign above a pallet block at the end of the dead-end aisle">
+<p class="cap">SG-09 points straight into a pallet block. Behind it is the sealed former exit.</p>
+</div>
+</div>
+<p class="foot">Visual Vibes · factory egress · report</p>
+<aside>Every finding names the sign, door or place, with the number behind it. For example, the longest stop with no exit sign in view gives the exact spot where a new sign would help.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="next">
+<p class="eyebrow">Where it goes next</p>
+<h2>From one room to every project</h2>
+<div class="rows">
+<div class="row"><h3>Load real projects</h3><p>Bring in a Revit or Rhino model; its IFC properties become the metadata.</p></div>
+<div class="row"><h3>Life-safety reviews</h3><p>Test signs, decoy doors and routes with people before construction.</p></div>
+<div class="row"><h3>Real eye tracking</h3><p>Run the walk on a VR headset with eye tracking instead of the screen centre.</p></div>
+<div class="row"><h3>Group studies</h3><p>8 to 12 people per study, with decoded vs stated picks as the accuracy check.</p></div>
+<div class="row"><h3>Product libraries</h3><p>Use manufacturers’ glass, finish and sign data as the options people test.</p></div>
+</div>
+<p class="foot">Visual Vibes · github.com/MF-Little/AEC-Hack-Project</p>
+<aside>The prototype already runs any room described in a JSON file, and the egress study shows the same engine answering a performance question. The next step is reading those files from real models.</aside>
+</section>
+</div></div>
+<script>
+function fit() { const w = Math.min(innerWidth - 32, 1920), k = w / 1920;
+  document.querySelectorAll('.slot').forEach(s => { s.style.width = w + 'px'; s.style.height = 1080 * k + 'px'; s.firstElementChild.style.transform = 'scale(' + k + ')'; }); }
+addEventListener('resize', fit); fit();
+</script>
+</body></html>
