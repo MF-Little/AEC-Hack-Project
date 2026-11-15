@@ -1,6 +1,6 @@
-# Gaze Decoder
+# Visual Vibes
 
-Gaze Decoder learns what people respond to in a space and turns it into design direction. It works the way ad platforms read browsing data, but the output is window, wall, glass and furniture direction.
+Visual Vibes learns what people respond to in a space and turns it into design direction. It works the way ad platforms read browsing data, but the output is window, wall, glass and furniture direction.
 
 A participant walks an open-plan home in first person. Every window, wall and furniture area carries hidden metadata. The app records what they look at, for how long, and what they say. Meanwhile, wall finish, glass and furniture style are switched around them. It then decodes their preferences.
 

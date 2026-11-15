@@ -187,11 +187,11 @@ export function openReport() {
     const show = () => { $('#json-sec').hidden = false; const b = $('#jsonbox'); b.value = txt; b.focus(); b.select(); };
     try { navigator.clipboard.writeText(txt).then(() => { $('#r-copy').textContent = 'Copied'; }, show); } catch (e) { show(); }
   };
-  $('#g-export').onclick = () => downloadJSON(`gaze-decoder-walks-${new Date().toISOString().slice(0, 10)}.json`, listWalks());
+  $('#g-export').onclick = () => downloadJSON(`visual-vibes-walks-${new Date().toISOString().slice(0, 10)}.json`, listWalks());
   $('#g-import').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     f.text().then(t => { const n = importWalks(JSON.parse(t)); $('#group').innerHTML = groupSection(); $('#g-export').textContent = `Imported ${n}`; })
-      .catch(() => { $('#group').insertAdjacentHTML('afterbegin', '<p class="notice">That file is not a Gaze Decoder walk export.</p>'); });
+      .catch(() => { $('#group').insertAdjacentHTML('afterbegin', '<p class="notice">That file is not a Visual Vibes walk export.</p>'); });
   };
   let armed = false;
   $('#g-clear').onclick = () => {

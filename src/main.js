@@ -21,7 +21,7 @@ const DEBUG = params.get('debug') === '1';
 const nextFrame = DEBUG
   ? f => { const t0 = performance.now(), ch = new MessageChannel(); ch.port1.onmessage = () => { if (performance.now() - t0 < 15) ch.port2.postMessage(0); else f(performance.now()); }; ch.port2.postMessage(0); }
   : f => requestAnimationFrame(f);
-if (DEBUG) { window.__gd = S; window.__cam = camera; }
+if (DEBUG) { window.__gd = S; window.__cam = camera; window.__r = renderer; window.__scene = scene; }
 
 function setSubject(sub) {
   S.subject = sub;

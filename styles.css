@@ -1,4 +1,4 @@
-/* Gaze Decoder styles. Monochrome model look; one signal colour marks what the app tracks. */
+/* Visual Vibes styles. Monochrome model look; one signal colour marks what the app tracks. */
 /* Layout: full-bleed first-person room; observer layer (zones, tags, feed) floats over it; report is a drawing-sheet overlay. */
 :root{
   --paper:#EDECE8;      /* model board */
