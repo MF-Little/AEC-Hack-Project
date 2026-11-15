@@ -5,8 +5,8 @@
 //  - In view: a sign is on screen, its face turned towards you, nothing solid in between, and
 //    smoke and darkness thin enough for its illumination type.
 //  - Legible: in view and no farther than its rated viewing distance (Z factor x sign height).
-//  - Looked at: the centre-weighted rays (same as the glazing study) rest on it while your view
-//    is steady (turning slower than 0.5 rad/s; walking is allowed).
+//  - Looked at: fixation time, the sign within about 3 degrees of the centre of view while the
+//    view is steady (turning slower than 0.5 rad/s; walking is allowed).
 //  - Followed: in the 4 s after first looking at a sign, you moved at least 1.2 m within 60
 //    degrees of the direction it points.
 import * as THREE from 'three';
@@ -132,7 +132,7 @@ function signsInView(r, dt) {
 }
 
 function gaze(r, dt, steady) {
-  const per = {}; let centre = null;
+  const per = {}, fix = new Set(); let centre = null;
   for (let i = 0; i < SAMPLES.length; i++) {
     const outer = i > 8; if (outer && (frame & 1)) continue;
     const [sx, sy, w] = SAMPLES[i], t = outer ? dt * 2 : dt;
@@ -141,13 +141,16 @@ function gaze(r, dt, steady) {
     if (!h) continue;
     const tag = h.object.userData.tag;
     if (i === 0) centre = h;
+    if (i <= 8) fix.add(tag);   // centre ray and the 3-degree ring: what the eye is resting on
     if (steady) { per[tag] = (per[tag] || 0) + w * t / WSUM; deposit(h.point, w * t, tag); }
   }
-  for (const tag in per) {
-    const o = r.obj[tag] || (r.obj[tag] = 0); r.obj[tag] = o + per[tag];
+  for (const tag in per) { const o = r.obj[tag] || (r.obj[tag] = 0); r.obj[tag] = o + per[tag]; }
+  // Signs are small, so the area-weighted score above under-counts them. For signs, looking is
+  // fixation time: seconds the sign sits within about 3 degrees of the centre while the view is steady.
+  if (steady) for (const tag of fix) {
     const st = r.signs[tag];
-    if (st) {
-      st.attn += per[tag];
+    if (st && E.inView.has(tag)) {   // a sign too dark or smoky to read is not being looked at
+      st.attn += dt;
       if (!st.firstLook && st.attn >= EC.firstLook) {
         const S = B.signs[tag], dist = camera.position.distanceTo(S.pos);
         st.firstLook = { t: +r.t.toFixed(1), dist: +dist.toFixed(1), x: +E.pos.x.toFixed(2), z: +E.pos.z.toFixed(2) };
@@ -166,7 +169,9 @@ function followChecks(r, x, z) {
     if (r.t - st.check.t0 < EC.followWindow) continue;
     const def = B.signs[id].def, p = dirOf(def.points);
     const mx = x - st.check.x, mz = z - st.check.z, L = Math.hypot(mx, mz);
-    if (!p) st.followed = 'n/a';
+    // a sign over an exit door is followed by heading for that door
+    if (def.exit) { const d = E.room.exits.find(e => e.id === def.exit).door; st.followed = Math.hypot(st.check.x - d.x, st.check.z - d.z) - Math.hypot(x - d.x, z - d.z) > 1 ? 'yes' : L < 1.2 ? 'stood' : 'no'; }
+    else if (!p) st.followed = 'n/a';
     else if (L < 1.2) st.followed = 'stood';
     else st.followed = (mx * p[0] + mz * p[1]) / L > 0.5 ? 'yes' : 'no';
     st.check = null;
@@ -177,7 +182,11 @@ function exitCheck(r, x, z) {
   for (const e of E.room.exits) {
     const d = e.door, n = dirOf(d.face), past = (d.x - x) * n[0] + (d.z - z) * n[1];
     const lat = n[0] ? Math.abs(z - d.z) : Math.abs(x - d.x);
-    if (past > 0.35 && lat < d.w / 2 + 0.3) { r.exit = { id: e.id, t: +r.t.toFixed(1) }; logEvent('exit', `Reached ${e.name}`); return e; }
+    if (past > 0.35 && lat < d.w / 2 + 0.3) {
+      r.exit = { id: e.id, t: +r.t.toFixed(1) }; logEvent('exit', `Reached ${e.name}`);
+      for (const s of E.room.signs) { const st = r.signs[s.id]; if (s.exit === e.id && st.check) { st.followed = 'yes'; st.check = null; } }
+      return e;
+    }
   }
   return null;
 }

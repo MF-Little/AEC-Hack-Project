@@ -52,8 +52,8 @@ function arrowAudit() {
 }
 function verdict(st, a) {
   if (st.attn >= EC.firstLook) {
-    if (st.followed === 'yes') return ['ok', 'Looked at, followed'];
-    if (st.followed === 'no') return a && !a.ok ? ['bad', 'Followed the wrong way'] : ['seen', 'Looked at, not followed'];
+    if (st.followed === 'yes') return a && !a.ok ? ['bad', 'Followed a misleading arrow'] : ['ok', 'Looked at, followed'];
+    if (st.followed === 'no') return a && !a.ok ? ['seen', 'Misleading, rightly ignored'] : ['seen', 'Looked at, not followed'];
     if (st.followed === 'stood') return ['seen', 'Looked at, then stopped'];
     return ['ok', 'Looked at'];
   }
@@ -65,14 +65,15 @@ function nearestThing(x, z) {
   const room = E.room, cands = [];
   const d2 = ([a, b, c, d]) => Math.hypot(Math.max(a - x, 0, x - b), Math.max(c - z, 0, z - d));
   room.racks.forEach(r => cands.push([d2(r.rect), `racking ${r.id}`]));
-  room.blocks.forEach(b => cands.push([d2(b.rect), b.name.toLowerCase()]));
-  room.decoys.forEach(d => cands.push([Math.hypot(d.door.x - x, d.door.z - z), d.name.toLowerCase()]));
-  room.exits.forEach(e => cands.push([Math.hypot(e.door.x - x, e.door.z - z), e.name.toLowerCase()]));
+  room.blocks.forEach(b => cands.push([d2(b.rect), lc1(b.name)]));
+  room.decoys.forEach(d => cands.push([Math.hypot(d.door.x - x, d.door.z - z), lc1(d.name)]));
+  room.exits.forEach(e => cands.push([Math.hypot(e.door.x - x, e.door.z - z), lc1(e.name)]));
   cands.push([d2(room.office.rect), 'the shift office']);
   cands.sort((a, b) => a[0] - b[0]);
   return `${cands[0][0] < 0.8 ? 'beside' : 'near'} ${cands[0][1]}`;
 }
 const name = id => (B.objects[id] ? B.objects[id].name : id);
+const lc1 = s => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;   // 'Stair B' stays, 'Hanging sign' becomes 'hanging sign'
 
 // ---------- route map ----------
 export function drawRoute(cv, r, o = {}) {
@@ -188,7 +189,7 @@ export function openReport() {
     <details class="adv"><summary>How it is measured</summary><div class="ai">
       <p><b>Spawn.</b> A 0.25 m floor grid gives the walking distance from every point to the nearest exit (Dijkstra, 30 cm body clearance). Each run starts at one of the farthest points, facing a random open direction.</p>
       <p><b>In view.</b> On screen, sign face turned towards you, nothing solid in between, and smoke and darkness thin enough for its illumination. <b>Readable</b> adds: within its rated viewing distance (Z factor × sign height: 200 for internally lit signs, 100 otherwise).</p>
-      <p><b>Looked at.</b> The same centre-weighted rays as the glazing study, counted only while the view is steady (turning slower than 0.5 rad/s; walking is allowed). ${EC.firstLook} s of steady looking counts as having looked.</p>
+      <p><b>Looked at.</b> Fixation time: seconds the sign sits within about 3° of the centre of view while the view is steady (turning slower than 0.5 rad/s; walking is allowed). ${EC.firstLook} s counts as having looked. The heat layer uses the same centre-weighted rays as the glazing study.</p>
       <p><b>Followed.</b> In the ${EC.followWindow} s after first looking, the person moved at least 1.2 m within 60° of the direction the sign points.</p>
       <p><b>Hesitation.</b> Moving slower than ${EC.hesitateSpeed} m/s for ${EC.hesitateMin} s or more after the first move. <b>Wrong turn.</b> Getting ${EC.wrongTurn} m farther from the nearest exit than your best so far; the detour is the distance walked until you are back.</p>
       <p><b>Arrow audit.</b> For each directional sign, the grid's shortest route from the sign's position is compared with the arrow; more than 60° apart is flagged.</p>
@@ -207,23 +208,23 @@ function findings(r, au) {
   const room = E.room, out = [], S = r.signs;
   if (r.result === 'exit') {
     const e = room.exits.find(x => x.id === r.exit.id);
-    out.push(['good', `Got out by ${e.name.toLowerCase()} in ${clockFmt(r.duration)}, walking ${r.walked} m against a best possible ${r.best_possible} m (${Math.round(r.efficiency * 100)}% efficient).`, 'exit and route']);
+    out.push(['good', `Got out by ${lc1(e.name)} in ${clockFmt(r.duration)}, walking ${r.walked} m against a best possible ${r.best_possible} m (${Math.round(r.efficiency * 100)}% efficient).`, 'exit and route']);
   } else out.push(['risk', `Did not reach an exit in ${clockFmt(r.duration)}.`, 'exit']);
   const atSpawn = room.signs.filter(s => S[s.id].firstVis && S[s.id].firstVis.t <= (r.orientT ?? r.duration) + 0.5);
   if (r.orientT !== null) out.push([r.orientT > 6 ? 'risk' : '', `Spent ${r.orientT.toFixed(1)} s at the spawn before moving. ${atSpawn.length ? `Signs in view from there: ${atSpawn.map(s => s.id).join(', ')}.` : 'No exit sign was in view from the spawn point.'}`, `spawn x ${r.spawn.x}, z ${r.spawn.z}`]);
   const worked = room.signs.filter(s => S[s.id].followed === 'yes');
-  if (worked.length) out.push(['good', `Signs that changed the route: ${worked.map(s => `${s.id} (${s.name.toLowerCase()}, ${s.illum === 'internal' ? 'lit' : s.illum === 'photolum' ? 'photoluminescent' : 'unlit'})`).join('; ')}.`, 'looked at, then moved the way the arrow points']);
+  if (worked.length) out.push(['good', `Signs that changed the route: ${worked.map(s => `${s.id} (${lc1(s.name)}, ${s.illum === 'internal' ? 'lit' : s.illum === 'photolum' ? 'photoluminescent' : 'unlit'})`).join('; ')}.`, 'looked at, then moved the way the arrow points']);
   const missed = room.signs.filter(s => S[s.id].legible > 1 && S[s.id].attn < EC.firstLook).sort((a, b) => S[b.id].legible - S[a.id].legible);
   for (const s of missed.slice(0, 3)) {
     const why = s.y > 4 ? `mounted at ${s.y} m, above the usual field of view` : s.mount === 'low' ? 'mounted low, at 0.45 m' : s.illum !== 'internal' ? 'not internally lit' : 'competing with the racking and machines around it';
-    out.push(['risk', `${s.id} (${s.name.toLowerCase()}) was readable for ${S[s.id].legible.toFixed(0)} s but never looked at: ${why}.`, (B.objects[s.id].props.Mounting || '') + ' · rated ' + Math.round(B.objects[s.id].rated) + ' m']);
+    out.push(['risk', `${s.id} (${lc1(s.name)}) was readable for ${S[s.id].legible.toFixed(0)} s but never looked at: ${why}.`, (B.objects[s.id].props.Mounting || '') + ' · rated ' + Math.round(B.objects[s.id].rated) + ' m']);
   }
   for (const s of room.signs) if (au[s.id] && !au[s.id].ok && (S[s.id].attn >= EC.firstLook || S[s.id].vis > 2)) {
     const tried = s.id === 'SG-09' && r.decoys['D-OLD'];
     out.push(['risk', `${s.id} points ${s.points} but the shortest route from it heads ${au[s.id].route}.${s.flags ? ' Flags: ' + s.flags.join(', ') + '.' : ''}${tried ? ' The person then tried the sealed door it points to.' : S[s.id].followed === 'yes' ? ' The person followed it.' : ''}`, 'arrow audit against the floor grid']);
   }
   if (r.decoys.LIFT) out.push(['risk', `Tried the goods lift at ${clockFmt(r.decoys.LIFT.t)}. The “do not use lift” sign SG-10 was ${S['SG-10'].attn >= EC.firstLook ? 'looked at' : S['SG-10'].vis ? 'in view but not looked at' : 'never in view'}.`, 'decoy door']);
-  for (const id of Object.keys(r.decoys)) if (id !== 'LIFT') out.push(['risk', `Tried ${name(id).toLowerCase()} at ${clockFmt(r.decoys[id].t)}.`, 'decoy door']);
+  for (const id of Object.keys(r.decoys)) if (id !== 'LIFT') out.push(['risk', `Tried ${lc1(name(id))} at ${clockFmt(r.decoys[id].t)}.`, 'decoy door']);
   if (r.collapse) {
     const after = r.path.find(p => p[0] > r.collapse.t && p[3] !== null && p[3] < r.collapse.after - 3);
     out.push(['', `Stock fell ${r.collapse.ahead} m ahead at ${clockFmt(r.collapse.t)} and blocked the aisle; the way out grew from ${r.collapse.before} m to ${r.collapse.after} m. ${after ? `Back on a working route ${(after[0] - r.collapse.t).toFixed(0)} s later.` : 'The person did not find a working route before the run ended.'}`, `site ${r.collapse.site}`]);
@@ -234,7 +235,7 @@ function findings(r, au) {
   }
   const blind = r.hes.filter(h => !h.signs.length && h.dur >= 2).sort((a, b) => b.dur - a.dur)[0];
   if (blind) out.push(['risk', `The longest stop with no exit sign in view was ${blind.dur.toFixed(1)} s ${nearestThing(blind.x, blind.z)}. A sign visible from x ${blind.x}, z ${blind.z} would help.`, 'decision point']);
-  for (const de of room.deadEnds) if (r.deadEnds[de.id] && r.deadEnds[de.id].entries) out.push(['risk', `Walked into a dead end (${de.name.toLowerCase()}) ${r.deadEnds[de.id].entries}×, ${r.deadEnds[de.id].time.toFixed(0)} s inside.`, de.id]);
+  for (const de of room.deadEnds) if (r.deadEnds[de.id] && r.deadEnds[de.id].entries) out.push(['risk', `Walked into a dead end (${lc1(de.name)}) ${r.deadEnds[de.id].entries}×, ${r.deadEnds[de.id].time.toFixed(0)} s inside.`, de.id]);
   return out.map(([cls, t, src]) => `<li class="${cls}">${esc(t)}<span class="src">${esc(src)}</span></li>`).join('');
 }
 

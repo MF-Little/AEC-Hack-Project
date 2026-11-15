@@ -14,6 +14,7 @@ import { setupReport, openReport, drawRoute, saveRun, analyseNote } from './repo
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.get('debug') === '1';
+const SPEED = DEBUG ? Math.min(2, Math.max(0.25, +params.get('speed') || 1)) : 1;   // debug only: faster scripted test walks
 const nextFrame = DEBUG
   ? f => { const t0 = performance.now(), ch = new MessageChannel(); ch.port1.onmessage = () => { if (performance.now() - t0 < 15) ch.port2.postMessage(0); else f(performance.now()); }; ch.port2.postMessage(0); }
   : f => requestAnimationFrame(f);
@@ -268,7 +269,7 @@ async function boot() {
 addEventListener('resize', resize); resize();
 let last = performance.now(), uiT = 0;
 function frame(now) {
-  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const dt = Math.min(0.1, (now - last) / 1000) * SPEED; last = now;
   if ($('#report').hidden) {
     if (E.review) { move(dt); applyCamera(null); }
     else if (E.started && !E.done) {

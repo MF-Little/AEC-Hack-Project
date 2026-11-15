@@ -7,7 +7,7 @@ export const EC = {
   hesitateSpeed: 0.2,     // m/s: slower than this counts as standing
   hesitateMin: 1.0,       // s of standing (after the first move) that counts as a hesitation
   wrongTurn: 2.5,         // m: getting this much farther from the exit than your best counts as a wrong turn
-  firstLook: 0.25,        // s of steady looking that counts as having looked at a sign
+  firstLook: 0.25,        // s of fixation (within about 3 degrees, steady) that counts as having looked at a sign
   followWindow: 4.0,      // s after first looking at a sign used to judge whether the person followed it
   decoyReach: 1.3         // m: standing this close in front of a door, facing it, counts as trying it
 };
