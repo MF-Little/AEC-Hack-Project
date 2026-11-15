@@ -18,7 +18,7 @@ const SPEED = DEBUG ? Math.min(2, Math.max(0.25, +params.get('speed') || 1)) : 1
 const nextFrame = DEBUG
   ? f => { const t0 = performance.now(), ch = new MessageChannel(); ch.port1.onmessage = () => { if (performance.now() - t0 < 15) ch.port2.postMessage(0); else f(performance.now()); }; ch.port2.postMessage(0); }
   : f => requestAnimationFrame(f);
-if (DEBUG) Object.assign(window, { __nav: NAV, __eg: E, __hz: HZ, __B: B, __cam: camera, __r: renderer, __scene: scene });
+if (DEBUG) Object.assign(window, { __collapseAt: (id, ahead = 5) => { const s = room().collapseSites.find(c => c.id === id); return s && E.run ? fireCollapse(E.run, s, ahead) : false; }, __nav: NAV, __eg: E, __hz: HZ, __B: B, __cam: camera, __r: renderer, __scene: scene });
 
 let baseColliders = [], sound = true;
 const room = () => E.room;
@@ -143,6 +143,11 @@ function tryCollapse(r, anyView) {
   let best = null;
   for (const [site, d] of found) { if (!seen(site) && !anyView) continue; if (!best || Math.abs(d - 8) < Math.abs(best.d - 8)) best = { site, d }; }
   if (!best) return false;
+  return fireCollapse(r, best.site, best.d);
+}
+// Drop the stock (or roof debris) at one site, if a way out remains, and re-plan every distance
+function fireCollapse(r, site, ahead) {
+  const best = { site, d: ahead };
   const g = makeGrid(room(), [...E.blockers, best.site.rect]), F = field(g), Dn = distAt(g, F, E.pos.x, E.pos.z);
   if (!isFinite(Dn)) return false;
   const Db = distAt(E.grid, E.F, E.pos.x, E.pos.z);
