@@ -34,9 +34,10 @@ export function groupResults(roomId, defs) {
   return { n: walks.length, tests, agreeN: tests.reduce((a, t) => a + t.agreeN, 0), agreeY: tests.reduce((a, t) => a + t.agreeY, 0) };
 }
 
-export function downloadJSON(name, data) {
+export function downloadJSON(name, data) { return downloadText(name, JSON.stringify(data, null, 2), 'application/json'); }
+export function downloadText(name, text, type = 'text/plain') {
   try {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([text], { type }));
     const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     return true;

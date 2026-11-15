@@ -20,6 +20,29 @@ function occluded(id, a, p) {
   return !!h && h.object.userData.tag !== id;
 }
 
+// Note pins for the 3D review: each remark floats where it was made.
+const pinEls = [];
+export function buildPins() {
+  const host = $('#pins'); host.innerHTML = ''; pinEls.length = 0;
+  S.session.notes.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'npin ' + (n.sentiment > 0 ? 'p' : n.sentiment < 0 ? 'n' : '');
+    el.innerHTML = `<b>${n.n}</b><span>${esc(n.text)}</span>`;
+    host.appendChild(el); pinEls.push([n, el]);
+  });
+}
+export function clearPins() { $('#pins').innerHTML = ''; pinEls.length = 0; }
+export function updatePins() {
+  const W = innerWidth, H = innerHeight;
+  for (const [n, el] of pinEls) {
+    v3.set(n.pos.x, 1.2, n.pos.z).project(camera);
+    if (v3.z > 1 || Math.abs(v3.x) > 1.1 || Math.abs(v3.y) > 1.1) { el.style.display = 'none'; continue; }
+    el.style.display = '';
+    el.style.left = ((v3.x + 1) / 2 * W) + 'px';
+    el.style.top = ((1 - v3.y) / 2 * H) + 'px';
+  }
+}
+
 export function buildLabels() {
   const host = $('#labels'); host.innerHTML = '';
   for (const k of Object.keys(labelEls)) delete labelEls[k];
@@ -52,12 +75,12 @@ export function renderPanel() {
   const now = $('#now'), nm = $('#nowmeta'), g = S.gaze;
   if (g.tag) {
     const o = S.objects[g.tag];
-    now.innerHTML = `<span><b>${esc(o.name)}</b></span><span class="k">${g.dist.toFixed(1)} m · ${g.t.toFixed(1)} s this look · ${zone ? zone.name.toLowerCase() + ' area' : 'between areas'}</span>`;
+    now.innerHTML = `<span><b>${esc(o.name)}</b>${S.gaze.part ? ' · ' + esc(S.gaze.part) : ''}</span><span class="k">${g.dist.toFixed(1)} m · ${g.t.toFixed(1)} s · ${S.deliberate ? 'steady look, counted' : 'sweeping, not counted'} · ${S.outside ? 'outside' : zone ? zone.name.toLowerCase() + ' area' : 'between areas'}</span>`;
     const key = g.tag + JSON.stringify(S.choice);
     if (nm.dataset.key !== key) { nm.dataset.key = key; nm.innerHTML = Object.entries(o.meta).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join(''); }
   } else { now.innerHTML = `<span class="k">nothing tagged · ${zone ? zone.name.toLowerCase() + ' area' : 'between areas'}</span>`; nm.dataset.key = ''; nm.innerHTML = ''; }
 
-  $('#onshow').innerHTML = Object.entries(room.variables).map(([v, d]) => {
+  $('#onshow').innerHTML = Object.entries(room.variables).filter(([v]) => S.vars.includes(v)).map(([v, d]) => {
     const ex = ses.exposure[v];
     const cells = Object.entries(d.options).map(([id, o]) => `<span class="${S.choice[v] === id ? 'cur' : ''}" title="${esc(o.name)}">${Math.round(ex[id].time)}s</span>`).join('');
     return `<div class="shrow"><span class="n">${esc(d.name)}</span><span class="v">${esc(d.options[S.choice[v]].name)}</span><span class="ex">${cells}</span></div>`;

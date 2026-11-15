@@ -36,12 +36,43 @@ export function drawWalls(f) {
     c.clearRect(X(x - N.w / 2), Z(-D / 2 - T) - 1, N.w * sc, T * sc + 2);
     c.beginPath(); c.moveTo(X(x - N.w / 2), Z(-D / 2 - T / 2)); c.lineTo(X(x + N.w / 2), Z(-D / 2 - T / 2)); c.stroke();
   });
-  Sth.xs.forEach(x => {
+  if (Sth.type === 'curtain') {
+    c.clearRect(X(-W / 2), Z(D / 2) - 1, W * sc, T * sc + 2);
+    c.lineWidth = 2; c.beginPath(); c.moveTo(X(-W / 2), Z(D / 2 + 0.12)); c.lineTo(X(W / 2), Z(D / 2 + 0.12)); c.stroke();
+    c.lineWidth = 1; c.strokeStyle = ink;
+    for (let i = 0; i <= Sth.modules; i++) { const x = -W / 2 + i * W / Sth.modules; c.beginPath(); c.moveTo(X(x), Z(D / 2 + 0.02)); c.lineTo(X(x), Z(D / 2 + 0.25)); c.stroke(); }
+  } else Sth.xs.forEach(x => {
     c.clearRect(X(x - Sth.w / 2), Z(D / 2) - 1, Sth.w * sc, T * sc + 2);
     c.beginPath(); c.moveTo(X(x - Sth.w / 2), Z(D / 2 + T / 2)); c.lineTo(X(x + Sth.w / 2), Z(D / 2 + T / 2)); c.stroke();
     c.lineWidth = 1; c.beginPath(); c.arc(X(x), Z(D / 2 + T / 2), Sth.w / 2 * sc, Math.PI, 0, true); c.stroke(); c.lineWidth = 2;
   });
   c.lineWidth = 1;
+  const I = room.interior; if (!I) return;
+  c.fillStyle = ink;
+  if (I.core) {
+    const k = I.core;
+    c.globalAlpha = 0.82; c.fillRect(X(k.x0), Z(k.z0), (k.x1 - k.x0) * sc, (k.z1 - k.z0) * sc); c.globalAlpha = 1;
+    c.fillStyle = f.paper || '#fff'; c.font = '9px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    c.fillText('bath', X((k.x0 + k.x1) / 2), Z((k.z0 + k.z1) / 2) + 3); c.fillStyle = ink;
+  }
+  (I.walls || []).forEach(w => {
+    const t = Math.max(2, 0.12 * sc);
+    if (w.x0 === w.x1) {
+      if (w.opening) {
+        const o = w.opening;
+        c.fillRect(X(w.x0) - t / 2, Z(w.z0), t, o.from * sc);
+        c.fillRect(X(w.x0) - t / 2, Z(w.z0 + o.from + o.w), t, (w.z1 - w.z0 - o.from - o.w) * sc);
+        c.strokeStyle = ink; c.beginPath(); c.arc(X(w.x0), Z(w.z0 + o.from), o.w * sc, Math.PI / 2, Math.PI / 2 + 0.6); c.stroke();
+      } else c.fillRect(X(w.x0) - t / 2, Z(w.z0), t, (w.z1 - w.z0) * sc);
+    } else c.fillRect(X(w.x0), Z(w.z0) - t / 2, (w.x1 - w.x0) * sc, t);
+  });
+  (I.columns || []).forEach(k => c.fillRect(X(k.x - 0.175), Z(k.z - 0.175), 0.35 * sc, 0.35 * sc));
+  if (I.frontDoor) {
+    const fd = I.frontDoor;
+    c.clearRect(X(W / 2) - 1, Z(fd.z - fd.w / 2), T * sc + 2, fd.w * sc);
+    c.strokeStyle = ink; c.beginPath(); c.moveTo(X(W / 2), Z(fd.z - fd.w / 2)); c.lineTo(X(W / 2 - fd.w), Z(fd.z - fd.w / 2)); c.stroke();
+    c.beginPath(); c.arc(X(W / 2), Z(fd.z - fd.w / 2), fd.w * sc, Math.PI / 2, Math.PI); c.stroke();
+  }
 }
 
 export function drawPlan(cv, big) {
@@ -55,7 +86,7 @@ export function drawPlan(cv, big) {
   c.setLineDash([]);
   c.fillStyle = mute; c.textAlign = 'center'; c.font = `${big ? 12 : 9}px "IBM Plex Mono", monospace`;
   S.zones.forEach(z => c.fillText(z.name, X(z.x), Z(z.z) + (big ? 4 : 3)));
-  if (big) { c.fillText('rectangular windows', X(0), Z(-D / 2 - T) - 10); c.fillText('arched windows', X(0), Z(D / 2 + T) + 18); }
+  if (big) { const nm = id => (S.objects[id] || { name: '' }).name.toLowerCase(); c.fillText(nm(S.room.facades.north.id), X(0), Z(-D / 2 - T) - 10); c.fillText(nm(S.room.facades.south.id), X(0), Z(D / 2 + T) + 18); }
   const pts = S.session.path;
   if (pts.length > 1) {
     c.strokeStyle = ink; c.globalAlpha = 0.55; c.lineWidth = big ? 1.6 : 1.1; c.lineJoin = 'round';

@@ -1,0 +1,1036 @@
+{
+  "id": "garden-apartment",
+  "name": "Garden Apartment",
+  "summary": "A 16 x 11 m garden apartment: open living, dining and kitchen, a bedroom and a bathroom core. Rectangular windows face north, arched windows face the south garden.",
+  "size": {
+    "w": 16,
+    "d": 11,
+    "h": 3.2
+  },
+  "wallT": 0.3,
+  "start": {
+    "x": 7.2,
+    "z": 4.0,
+    "yaw": 1.5708
+  },
+  "task": "You have just arrived at an apartment you might buy. Walk around, find where you would spend a slow Sunday morning, and say what you notice as you go.",
+  "sun": {
+    "pos": [
+      7,
+      10,
+      9
+    ],
+    "shadow": 12
+  },
+  "facades": {
+    "north": {
+      "id": "W-RECT",
+      "shape": "rect",
+      "w": 1.6,
+      "h": 2.3,
+      "sill": 0.5,
+      "xs": [
+        -6.2,
+        -2.5,
+        1.0,
+        4.5
+      ]
+    },
+    "south": {
+      "id": "W-CURVE",
+      "shape": "arch",
+      "w": 1.6,
+      "h": 2.46,
+      "sill": 0.5,
+      "xs": [
+        -6.2,
+        -2.5,
+        1.0,
+        4.5
+      ]
+    }
+  },
+  "interior": {
+    "core": {
+      "x0": -8,
+      "x1": -5.2,
+      "z0": -1.4,
+      "z1": 1.4,
+      "door": {
+        "z": 0.55,
+        "w": 0.85,
+        "h": 2.1
+      }
+    },
+    "walls": [
+      {
+        "x0": -5.2,
+        "z0": 1.4,
+        "x1": -4.4,
+        "z1": 1.4
+      },
+      {
+        "x0": -4.4,
+        "z0": 1.4,
+        "x1": -4.4,
+        "z1": 5.5,
+        "opening": {
+          "from": 0.35,
+          "w": 0.95,
+          "h": 2.15
+        }
+      }
+    ],
+    "columns": [
+      {
+        "x": -0.8,
+        "z": 0
+      },
+      {
+        "x": 3.3,
+        "z": 0
+      }
+    ],
+    "frontDoor": {
+      "wall": "E",
+      "z": 4.0,
+      "w": 1.0,
+      "h": 2.2
+    },
+    "bulkhead": {
+      "x0": 4.4,
+      "x1": 8,
+      "z0": -2.6,
+      "z1": 2.6,
+      "h": 2.75
+    },
+    "downlights": [
+      [
+        5.4,
+        -1.6
+      ],
+      [
+        5.4,
+        0
+      ],
+      [
+        5.4,
+        1.6
+      ],
+      [
+        7.0,
+        -1.6
+      ],
+      [
+        7.0,
+        0
+      ],
+      [
+        7.0,
+        1.6
+      ],
+      [
+        -1.5,
+        0
+      ],
+      [
+        1.2,
+        0
+      ],
+      [
+        -6.2,
+        3.4
+      ],
+      [
+        -6.4,
+        -3.4
+      ]
+    ]
+  },
+  "objects": {
+    "W-RECT": {
+      "name": "Rectangular windows",
+      "label": "Rectangular",
+      "kind": "window",
+      "meta": {
+        "Geometry": "Rectangle, sharp 90 degree corners",
+        "Size": "4 no. 1600 x 2300 mm, 3.68 m2 glass each",
+        "Sill": "500 mm, stone internal sill",
+        "Frame": "Slim dark bronze steel, 40 mm",
+        "Facing": "North, street side"
+      },
+      "props": {
+        "IFC class": "IfcWindow (WINDOW)",
+        "Classification": "Uniclass Pr_30_59_98_83 Steel windows",
+        "Spec section": "08 51 23 Steel Windows",
+        "Count": "4",
+        "Unit size": "1600 x 2300 mm",
+        "Head": "Square, 90 degree corners",
+        "Frame": "Steel, 40 mm sightline, dark bronze powder coat",
+        "Whole-window U-value": "1.3 W/m2K",
+        "Orientation": "North"
+      },
+      "traits": {
+        "curvature": 0,
+        "openness": 0.8,
+        "light": 0.7,
+        "minimal": 0.85,
+        "natural": 0.1,
+        "warmth": 0.2,
+        "texture": 0.1,
+        "low": 0.3,
+        "craft": 0.2,
+        "privacy": 0.2
+      },
+      "num": {
+        "cost": 1.0,
+        "carbon": 95,
+        "lead": 6
+      }
+    },
+    "W-CURVE": {
+      "name": "Arched windows",
+      "label": "Arched",
+      "kind": "window",
+      "meta": {
+        "Geometry": "Semicircular head, R 800",
+        "Size": "4 no. 1600 x 2460 mm, 3.68 m2 glass each",
+        "Sill": "500 mm, stone internal sill",
+        "Frame": "Slim dark bronze steel, 40 mm",
+        "Facing": "South, garden side, takes direct sun"
+      },
+      "props": {
+        "IFC class": "IfcWindow (WINDOW)",
+        "Classification": "Uniclass Pr_30_59_98_83 Steel windows",
+        "Spec section": "08 51 23 Steel Windows",
+        "Count": "4",
+        "Unit size": "1600 x 2460 mm, R 800 head",
+        "Head": "Semicircular arch, R 800",
+        "Frame": "Steel, 40 mm sightline, dark bronze powder coat, rolled head",
+        "Whole-window U-value": "1.3 W/m2K",
+        "Orientation": "South, direct sun"
+      },
+      "traits": {
+        "curvature": 1,
+        "openness": 0.8,
+        "light": 0.8,
+        "minimal": 0.5,
+        "natural": 0.1,
+        "warmth": 0.4,
+        "texture": 0.1,
+        "low": 0.4,
+        "craft": 0.65,
+        "privacy": 0.2
+      },
+      "num": {
+        "cost": 1.35,
+        "carbon": 102,
+        "lead": 10
+      }
+    },
+    "S-WALL": {
+      "name": "Walls",
+      "kind": "wall",
+      "meta": {
+        "Role": "Perimeter and partition walls; the finish is switchable"
+      },
+      "props": {
+        "IFC class": "IfcWall + IfcCovering (CLADDING)",
+        "Classification": "Uniclass Ss_25_10 Wall systems",
+        "Spec section": "09 20 00 Plaster and Gypsum Board"
+      },
+      "traits": {},
+      "num": {}
+    },
+    "S-FLOOR": {
+      "name": "Floor",
+      "kind": "surface",
+      "meta": {
+        "Material": "Engineered oak, 180 mm planks, matt oil"
+      },
+      "props": {
+        "IFC class": "IfcCovering (FLOORING)",
+        "Classification": "Uniclass Pr_25_93_60 Engineered timber flooring",
+        "Spec section": "09 64 29 Wood Strip and Plank Flooring",
+        "Finish": "Engineered oak, 180 mm planks, matt oil",
+        "LRV": "40"
+      },
+      "traits": {
+        "natural": 1,
+        "warmth": 0.8,
+        "texture": 0.6,
+        "light": 0.5,
+        "craft": 0.5,
+        "minimal": 0.5
+      },
+      "num": {
+        "light": 40,
+        "cost": 1.0,
+        "carbon": -8,
+        "nrc": 0.1,
+        "lead": 3
+      }
+    },
+    "S-CEIL": {
+      "name": "Ceiling",
+      "kind": "surface",
+      "meta": {
+        "Material": "Plaster ceiling",
+        "Height": "3200 mm, 2750 mm bulkhead over the kitchen"
+      },
+      "props": {
+        "IFC class": "IfcCovering (CEILING)",
+        "Classification": "Uniclass Ss_30_20 Ceiling systems",
+        "Spec section": "09 21 16 Gypsum Board Assemblies",
+        "LRV": "88"
+      },
+      "traits": {
+        "light": 0.95,
+        "minimal": 0.95,
+        "natural": 0.3,
+        "warmth": 0.4
+      },
+      "num": {
+        "light": 88,
+        "cost": 0.6,
+        "carbon": 7,
+        "nrc": 0.05,
+        "lead": 2
+      }
+    },
+    "S-CORE": {
+      "name": "Bathroom core",
+      "kind": "surface",
+      "meta": {
+        "Contains": "Bathroom, WC and laundry",
+        "Finish": "Plaster, painted door"
+      },
+      "props": {
+        "IFC class": "IfcWall (PARTITIONING)",
+        "Classification": "Uniclass Ss_25_30 Partition systems",
+        "Spec section": "09 21 16 Gypsum Board Assemblies",
+        "Contains": "Bathroom, WC, laundry"
+      },
+      "traits": {
+        "privacy": 0.95,
+        "minimal": 0.75,
+        "light": 0.7,
+        "natural": 0.3
+      },
+      "num": {
+        "light": 80,
+        "cost": 0.8,
+        "carbon": 18,
+        "nrc": 0.05,
+        "lead": 2
+      }
+    },
+    "S-COLUMN": {
+      "name": "Columns",
+      "kind": "surface",
+      "meta": {
+        "Structure": "Exposed concrete columns, 350 x 350 mm"
+      },
+      "props": {
+        "IFC class": "IfcColumn",
+        "Classification": "Uniclass Ss_20_05_15 Concrete frame",
+        "Spec section": "03 30 00 Cast-in-Place Concrete",
+        "Size": "350 x 350 mm, exposed fair-faced"
+      },
+      "traits": {
+        "natural": 0.5,
+        "texture": 0.7,
+        "warmth": 0.2,
+        "minimal": 0.55,
+        "craft": 0.4,
+        "light": 0.4
+      },
+      "num": {
+        "light": 38,
+        "cost": 1.2,
+        "carbon": 110,
+        "nrc": 0.02,
+        "lead": 0
+      }
+    },
+    "S-DOOR": {
+      "name": "Doors",
+      "kind": "surface",
+      "meta": {
+        "Doors": "Oak-veneer doors with painted frames"
+      },
+      "props": {
+        "IFC class": "IfcDoor (DOOR)",
+        "Classification": "Uniclass Pr_30_59_24 Doorsets",
+        "Spec section": "08 14 16 Flush Wood Doors",
+        "Finish": "Oak veneer, painted frames"
+      },
+      "traits": {
+        "natural": 0.7,
+        "warmth": 0.7,
+        "privacy": 0.8,
+        "minimal": 0.6,
+        "craft": 0.4,
+        "texture": 0.4
+      },
+      "num": {
+        "light": 45,
+        "cost": 1.0,
+        "carbon": 25,
+        "lead": 5
+      }
+    },
+    "F-LIVING": {
+      "name": "Living area",
+      "label": "Living",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture",
+        "Classification": "Uniclass Pr_40_50 Furniture",
+        "Spec section": "12 50 00 Furniture",
+        "Contents": "Living area: sofa, coffee table, rug, lamp, plant"
+      },
+      "traits": {
+        "privacy": 0.3,
+        "low": 0.6,
+        "openness": 0.5
+      },
+      "num": {}
+    },
+    "F-DINING": {
+      "name": "Dining area",
+      "label": "Dining",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture",
+        "Classification": "Uniclass Pr_40_50 Furniture",
+        "Spec section": "12 50 00 Furniture",
+        "Contents": "Dining: table, chairs, pendant"
+      },
+      "traits": {
+        "openness": 0.6,
+        "privacy": 0.2
+      },
+      "num": {}
+    },
+    "F-STUDY": {
+      "name": "Study corner",
+      "label": "Study",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture",
+        "Classification": "Uniclass Pr_40_50 Furniture",
+        "Spec section": "12 50 00 Furniture",
+        "Contents": "Study: desk, chair, shelving"
+      },
+      "traits": {
+        "privacy": 0.5,
+        "minimal": 0.6
+      },
+      "num": {}
+    },
+    "F-NOOK": {
+      "name": "Reading nook",
+      "label": "Nook",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture",
+        "Classification": "Uniclass Pr_40_50 Furniture",
+        "Spec section": "12 50 00 Furniture",
+        "Contents": "Reading nook: chair, side table, plant"
+      },
+      "traits": {
+        "privacy": 0.7,
+        "low": 0.6
+      },
+      "num": {}
+    },
+    "F-KITCHEN": {
+      "name": "Kitchen",
+      "label": "Kitchen",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture + IfcSanitaryTerminal",
+        "Classification": "Uniclass Ss_40_15 Kitchen systems",
+        "Spec section": "12 35 30 Residential Casework",
+        "Contents": "Kitchen: counter, island, stools"
+      },
+      "traits": {
+        "minimal": 0.6,
+        "openness": 0.5
+      },
+      "num": {}
+    },
+    "F-BEDROOM": {
+      "name": "Bedroom",
+      "label": "Bedroom",
+      "kind": "furniture",
+      "meta": {},
+      "props": {
+        "IFC class": "IfcFurniture",
+        "Classification": "Uniclass Pr_40_50 Furniture",
+        "Spec section": "12 50 00 Furniture",
+        "Contents": "Bedroom: bed, bedside tables, wardrobe"
+      },
+      "traits": {
+        "privacy": 1.0,
+        "low": 0.5
+      },
+      "num": {}
+    }
+  },
+  "spots": [
+    {
+      "id": "W",
+      "x": -6.4,
+      "z": -3.5,
+      "face": "N",
+      "allow": [
+        "dining",
+        "study",
+        "nook"
+      ]
+    },
+    {
+      "id": "NM",
+      "x": -1.9,
+      "z": -2.9,
+      "face": "N"
+    },
+    {
+      "id": "NE",
+      "x": 2.4,
+      "z": -2.9,
+      "face": "N"
+    },
+    {
+      "id": "SM",
+      "x": -1.5,
+      "z": 3.0,
+      "face": "S"
+    },
+    {
+      "id": "SE",
+      "x": 2.6,
+      "z": 3.0,
+      "face": "S"
+    }
+  ],
+  "clusters": [
+    "living",
+    "dining",
+    "study",
+    "nook"
+  ],
+  "defaultLayout": {
+    "living": "SM",
+    "dining": "NE",
+    "study": "W",
+    "nook": "SE"
+  },
+  "kitchen": {
+    "zone": {
+      "x": 5.7,
+      "z": 0,
+      "r": 2.0
+    }
+  },
+  "bedroom": {
+    "x0": -8,
+    "x1": -4.4,
+    "z0": 1.4,
+    "z1": 5.5,
+    "zone": {
+      "x": -6.2,
+      "z": 3.4,
+      "r": 1.7
+    }
+  },
+  "variables": {
+    "walls": {
+      "name": "Wall finish",
+      "question": "Which wall finish do you prefer?",
+      "applies": "wall",
+      "default": "plaster",
+      "options": {
+        "plaster": {
+          "name": "Lime plaster",
+          "short": "Plaster",
+          "meta": "Smooth trowelled lime plaster, warm white",
+          "lean": "soft, matte, quiet surfaces",
+          "recs": {
+            "elements": [],
+            "concepts": [
+              "Soft, matte, quiet surfaces"
+            ],
+            "materials": [
+              "Lime plaster or tadelakt walls"
+            ]
+          },
+          "props": {
+            "Finish": "Lime plaster, smooth trowel, warm white",
+            "LRV": "82",
+            "NRC": "0.05",
+            "Maintenance": "Limewash every 7 to 10 years",
+            "VOC": "Very low"
+          },
+          "traits": {
+            "natural": 0.75,
+            "warmth": 0.6,
+            "texture": 0.3,
+            "light": 0.85,
+            "minimal": 0.9,
+            "craft": 0.55,
+            "curvature": 0.2
+          },
+          "num": {
+            "light": 82,
+            "cost": 1.0,
+            "carbon": 6,
+            "nrc": 0.05,
+            "lead": 2
+          }
+        },
+        "oak": {
+          "name": "Oak panelling",
+          "short": "Oak",
+          "meta": "Vertical white-oak boards, 120 mm, oiled",
+          "lean": "warm, natural timber",
+          "recs": {
+            "elements": [
+              "Timber-lined walls or feature panels"
+            ],
+            "concepts": [
+              "Warmth and natural materials"
+            ],
+            "materials": [
+              "Oiled oak panelling"
+            ]
+          },
+          "props": {
+            "Finish": "Vertical white-oak boards 120 mm, oiled, on acoustic backing",
+            "LRV": "45",
+            "NRC": "0.35",
+            "Maintenance": "Re-oil every 5 years",
+            "VOC": "Low (natural oil)"
+          },
+          "traits": {
+            "natural": 1.0,
+            "warmth": 0.9,
+            "texture": 0.8,
+            "light": 0.45,
+            "minimal": 0.4,
+            "craft": 0.7
+          },
+          "num": {
+            "light": 45,
+            "cost": 4.0,
+            "carbon": -12,
+            "nrc": 0.35,
+            "lead": 6
+          }
+        },
+        "concrete": {
+          "name": "Board-formed concrete",
+          "short": "Concrete",
+          "meta": "Board-formed concrete, 150 mm boards",
+          "lean": "raw, honest structure",
+          "recs": {
+            "elements": [
+              "Exposed structural walls"
+            ],
+            "concepts": [
+              "Raw, honest structure"
+            ],
+            "materials": [
+              "Board-marked concrete or textured precast"
+            ]
+          },
+          "props": {
+            "Finish": "Board-formed concrete, 150 mm boards, sealed",
+            "LRV": "38",
+            "NRC": "0.02",
+            "Maintenance": "Reseal every 10 years",
+            "VOC": "Very low"
+          },
+          "traits": {
+            "natural": 0.5,
+            "warmth": 0.2,
+            "texture": 0.75,
+            "light": 0.38,
+            "minimal": 0.6,
+            "craft": 0.45
+          },
+          "num": {
+            "light": 38,
+            "cost": 4.9,
+            "carbon": 95,
+            "nrc": 0.02,
+            "lead": 8
+          }
+        }
+      }
+    },
+    "glass": {
+      "name": "Glass",
+      "question": "Which glass do you prefer?",
+      "applies": "window",
+      "default": "clear",
+      "options": {
+        "clear": {
+          "name": "Low-iron clear",
+          "short": "Clear",
+          "vlt": 91,
+          "meta": "Low-iron laminated 10.76 mm, VLT 91%",
+          "color": "#E8EFF2",
+          "opacity": 0.1,
+          "sun": "#FFF1DE",
+          "lean": "clear glass and full daylight",
+          "recs": {
+            "elements": [
+              "Large unobstructed openings"
+            ],
+            "concepts": [
+              "Full daylight and true colour"
+            ],
+            "materials": [
+              "Low-iron laminated glass with anti-reflective coating, VLT 88% or more"
+            ]
+          },
+          "props": {
+            "Glass": "Low-iron laminated 10.76 mm in double-glazed unit",
+            "VLT": "91%",
+            "g-value (SHGC)": "0.62",
+            "Centre-pane U-value": "1.1 W/m2K",
+            "Colour rendering Ra": "98",
+            "External reflectance": "8%"
+          },
+          "traits": {
+            "light": 1.0,
+            "openness": 1.0,
+            "minimal": 0.8,
+            "privacy": 0.0,
+            "warmth": 0.3
+          },
+          "num": {
+            "light": 91,
+            "cost": 1.0,
+            "carbon": 32,
+            "lead": 4
+          }
+        },
+        "frit": {
+          "name": "Fritted dot",
+          "short": "Frit",
+          "vlt": 58,
+          "meta": "Low-iron with 50% white ceramic dot frit, VLT 58%",
+          "color": "#ffffff",
+          "opacity": 1,
+          "sun": "#FFF4E8",
+          "frit": true,
+          "lean": "filtered light that keeps the view",
+          "recs": {
+            "elements": [
+              "Graded frit for privacy at eye level"
+            ],
+            "concepts": [
+              "Filtered light that keeps the view"
+            ],
+            "materials": [
+              "Ceramic dot frit, 40 to 60% coverage, on low-iron glass"
+            ]
+          },
+          "props": {
+            "Glass": "Low-iron with 50% white ceramic dot frit, double-glazed",
+            "VLT": "58%",
+            "g-value (SHGC)": "0.42",
+            "Centre-pane U-value": "1.1 W/m2K",
+            "Colour rendering Ra": "95",
+            "External reflectance": "10%"
+          },
+          "traits": {
+            "light": 0.6,
+            "openness": 0.6,
+            "privacy": 0.6,
+            "texture": 0.5,
+            "craft": 0.35,
+            "minimal": 0.5
+          },
+          "num": {
+            "light": 58,
+            "cost": 1.25,
+            "carbon": 36,
+            "lead": 6
+          }
+        },
+        "bronze": {
+          "name": "Bronze tint",
+          "short": "Bronze",
+          "vlt": 35,
+          "meta": "Bronze-tint solar-control double glazing, VLT 35%",
+          "color": "#7A6650",
+          "opacity": 0.46,
+          "sun": "#FFD3A0",
+          "lean": "warm, shaded light",
+          "recs": {
+            "elements": [
+              "Deep reveals or overhangs for shade"
+            ],
+            "concepts": [
+              "Warm, shaded, calm light"
+            ],
+            "materials": [
+              "Bronze or grey solar-control glass, VLT 35 to 50%"
+            ]
+          },
+          "props": {
+            "Glass": "Bronze-tint solar-control double glazing",
+            "VLT": "35%",
+            "g-value (SHGC)": "0.30",
+            "Centre-pane U-value": "1.0 W/m2K",
+            "Colour rendering Ra": "80",
+            "External reflectance": "12%"
+          },
+          "traits": {
+            "light": 0.3,
+            "openness": 0.5,
+            "warmth": 0.9,
+            "privacy": 0.5,
+            "minimal": 0.6
+          },
+          "num": {
+            "light": 35,
+            "cost": 1.1,
+            "carbon": 34,
+            "lead": 5
+          }
+        }
+      }
+    },
+    "style": {
+      "name": "Furniture style",
+      "question": "Which furniture style do you prefer?",
+      "applies": "furniture",
+      "default": "scandi",
+      "options": {
+        "japanese": {
+          "name": "Japanese",
+          "meta": "Low hinoki and oak pieces, linen, tatami rug, paper lanterns",
+          "lean": "low, calm, crafted living",
+          "recs": {
+            "elements": [
+              "Low seating and platforms",
+              "Sliding screens to divide space"
+            ],
+            "concepts": [
+              "Calm minimalism, close to the floor"
+            ],
+            "materials": [
+              "Pale hinoki or oak, linen, washi paper"
+            ]
+          },
+          "props": {
+            "Palette": "Hinoki and pale oak, linen, washi paper, tatami",
+            "Typical seat height": "280 mm",
+            "Upholstery": "Linen",
+            "Origin of pieces": "Joinery-made, low"
+          },
+          "traits": {
+            "low": 1.0,
+            "natural": 0.9,
+            "minimal": 0.9,
+            "craft": 0.8,
+            "warmth": 0.6,
+            "texture": 0.4,
+            "light": 0.7,
+            "curvature": 0.3
+          },
+          "num": {
+            "cost": 1.3,
+            "carbon": 40,
+            "lead": 10
+          }
+        },
+        "latin": {
+          "name": "Latin",
+          "meta": "Dark walnut, terracotta upholstery, rattan, jute, clay pots",
+          "lean": "warm, earthy, sociable living",
+          "recs": {
+            "elements": [
+              "Generous sociable seating",
+              "Large planters and clay vessels"
+            ],
+            "concepts": [
+              "Warm, earthy, sociable rooms"
+            ],
+            "materials": [
+              "Terracotta, rattan, dark walnut, jute"
+            ]
+          },
+          "props": {
+            "Palette": "Dark walnut, terracotta, rattan, jute, clay",
+            "Typical seat height": "450 mm",
+            "Upholstery": "Heavy cotton in terracotta",
+            "Origin of pieces": "Artisan-made, generous"
+          },
+          "traits": {
+            "warmth": 1.0,
+            "natural": 0.8,
+            "texture": 0.8,
+            "craft": 0.9,
+            "curvature": 0.7,
+            "low": 0.4,
+            "minimal": 0.2,
+            "light": 0.4
+          },
+          "num": {
+            "cost": 1.15,
+            "carbon": 48,
+            "lead": 8
+          }
+        },
+        "scandi": {
+          "name": "Scandinavian",
+          "short": "Scandi",
+          "meta": "Light ash, grey wool, white, slim legs, dome pendants",
+          "lean": "light, airy, simple living",
+          "recs": {
+            "elements": [
+              "Slim-legged furniture that keeps the floor visible"
+            ],
+            "concepts": [
+              "Light, airy simplicity"
+            ],
+            "materials": [
+              "Light ash or birch, grey wool, white lacquer"
+            ]
+          },
+          "props": {
+            "Palette": "Light ash and birch, grey wool, white lacquer",
+            "Typical seat height": "420 mm",
+            "Upholstery": "Grey wool",
+            "Origin of pieces": "Production furniture, slim legs"
+          },
+          "traits": {
+            "light": 0.9,
+            "minimal": 0.8,
+            "natural": 0.7,
+            "warmth": 0.5,
+            "curvature": 0.5,
+            "low": 0.5,
+            "texture": 0.3,
+            "craft": 0.4
+          },
+          "num": {
+            "cost": 1.0,
+            "carbon": 35,
+            "lead": 4
+          }
+        }
+      }
+    }
+  },
+  "shapeRecs": {
+    "W-RECT": {
+      "lean": "crisp, rectangular openings",
+      "recs": {
+        "elements": [
+          "Rectilinear openings with crisp arrises",
+          "Shadow-gap reveals"
+        ],
+        "concepts": [
+          "Precise minimalism",
+          "Views framed like pictures"
+        ],
+        "materials": [
+          "Flat structural-glazed units"
+        ]
+      }
+    },
+    "W-CURVE": {
+      "lean": "curved, soft openings",
+      "recs": {
+        "elements": [
+          "Arched or radiused openings, head radius 600 mm or more",
+          "Curved reveals returned in plaster"
+        ],
+        "concepts": [
+          "Soft enclosure",
+          "Biomorphic geometry"
+        ],
+        "materials": [
+          "Lime plaster reveals"
+        ]
+      }
+    }
+  },
+  "traits": [
+    {
+      "id": "curvature",
+      "label": "Curved, soft geometry"
+    },
+    {
+      "id": "natural",
+      "label": "Natural materials"
+    },
+    {
+      "id": "warmth",
+      "label": "Warm colour and tone"
+    },
+    {
+      "id": "texture",
+      "label": "Visible texture and grain"
+    },
+    {
+      "id": "light",
+      "label": "Brightness and daylight"
+    },
+    {
+      "id": "openness",
+      "label": "View and openness"
+    },
+    {
+      "id": "low",
+      "label": "Low, grounded profile"
+    },
+    {
+      "id": "craft",
+      "label": "Crafted, handmade feel"
+    },
+    {
+      "id": "minimal",
+      "label": "Minimal, quiet detailing"
+    },
+    {
+      "id": "privacy",
+      "label": "Enclosure and privacy"
+    }
+  ],
+  "numeric": [
+    {
+      "id": "light",
+      "label": "Light: VLT or reflectance (%)"
+    },
+    {
+      "id": "cost",
+      "label": "Cost index (1.0 = baseline)"
+    },
+    {
+      "id": "carbon",
+      "label": "Embodied carbon (kgCO2e/m2)"
+    },
+    {
+      "id": "nrc",
+      "label": "Sound absorption (NRC)"
+    },
+    {
+      "id": "lead",
+      "label": "Lead time (weeks)"
+    }
+  ]
+}

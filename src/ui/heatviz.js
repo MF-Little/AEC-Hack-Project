@@ -44,8 +44,9 @@ export function drawPlanHeat(cv) {
   drawWalls(f);
   c.fillStyle = mute; c.textAlign = 'center'; c.font = '11px "IBM Plex Mono", monospace';
   S.zones.forEach(z => c.fillText(z.name, X(z.x), Z(z.z) + 4));
-  c.fillText('rectangular windows', X(0), Z(-f.D / 2 - f.T) - 10);
-  c.fillText('arched windows', X(0), Z(f.D / 2 + f.T) + 18);
+  const nm = id => (S.objects[id] || { name: '' }).name.toLowerCase();
+  c.fillText(nm(S.room.facades.north.id), X(0), Z(-f.D / 2 - f.T) - 10);
+  c.fillText(nm(S.room.facades.south.id), X(0), Z(f.D / 2 + f.T) + 18);
 }
 
 // One window wall, unrolled: x along the wall, height up. side = 'north' | 'south'.
@@ -66,7 +67,13 @@ export function drawElevation(cv, side) {
   if (pts.length) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(heatLayer(cw, ch, dpr, pts, 0.45 * sc), 0, 0); c.restore(); }
   c.strokeStyle = ink; c.lineWidth = 1.2;
   c.strokeRect(X(-W / 2), Y(H), W * sc, H * sc);
-  f.xs.forEach(x => {
+  if (f.type === 'curtain') {
+    c.lineWidth = 1;
+    for (let i = 0; i <= f.modules; i++) { const x = -W / 2 + i * W / f.modules; c.beginPath(); c.moveTo(X(x), Y(0)); c.lineTo(X(x), Y(H)); c.stroke(); }
+    c.beginPath(); c.moveTo(X(-W / 2), Y(f.transom)); c.lineTo(X(W / 2), Y(f.transom)); c.stroke();
+    c.fillStyle = mute; c.font = '9.5px "IBM Plex Mono", monospace'; c.textAlign = 'center';
+    for (let i = 0; i < f.modules; i++) c.fillText('M' + String(i + 1).padStart(2, '0'), X(-W / 2 + (i + 0.5) * W / f.modules), Y(H) - 4);
+  } else f.xs.forEach(x => {
     const x0 = X(x - f.w / 2), x1 = X(x + f.w / 2), y0 = Y(f.sill);
     c.beginPath();
     if (f.shape === 'arch') { const r = f.w / 2, yc = f.sill + f.h - r; c.moveTo(x0, y0); c.lineTo(x0, Y(yc)); c.arc(X(x), Y(yc), r * sc, Math.PI, 0); c.lineTo(x1, y0); c.closePath(); }

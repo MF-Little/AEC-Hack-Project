@@ -9,6 +9,8 @@ export const CONFIG = {
   wallClear: 0.3,       // how close the viewer can get to a wall
   minShown: 10,         // seconds an option must be on show to count in its comparison
   rotateEvery: 20,      // auto-rotate: seconds between option changes
+  steadyTurn: 0.35,     // rad/s: turning slower than this (about 20 deg/s) counts as deliberate looking
+  steadyMove: 0.6,      // m/s: moving slower than this counts as deliberate looking
   zoneR: 2.0            // radius of each furniture-area zone
 };
 
@@ -24,6 +26,9 @@ export const S = {
   gaze: { tag: null, t: 0, captured: false, dist: 0 },
   heatLive: false,      // heatmap painted during the walk (observer only, off by default)
   review: false,        // heatmap review mode: tracking paused, heat shown
+  outside: false,       // facade view: standing in the garden
+  deliberate: true,     // is the view steady right now
+  vars: [],             // the variables that are actually tested (not fixed)
   subject: false,
   eye: 1.6,
   yaw: 0, pitch: 0,
@@ -54,7 +59,10 @@ export function newSession({ participant = '', seed = Date.now() % 1e9, autoRota
     layouts: [],                       // every layout shown, with the time it appeared
     exposure: Object.fromEntries(Object.entries(room.variables).map(([v, def]) => [v,
       Object.fromEntries(Object.keys(def.options).map(o => [o, { time: 0, attn: 0, captures: 0, sentiment: 0, notes: 0 }]))])),
-    stated: {}                         // test id -> option id the participant said they preferred
+    stated: {},                        // test id -> option id the participant said they preferred
+    inst: {},                          // element instance key -> { time, attn, vis, gaze, captures, notes, sentiment }
+    parts: {},                         // curtain-wall module part -> { in, out } deliberate attention
+    look: { deliberate: 0, passing: 0, outside: 0 }   // seconds of steady looking, sweeping, and time outside
   };
   for (const o of Object.values(S.objects)) o.s = blankStats();
   S.gaze = { tag: null, t: 0, captured: false, dist: 0 };

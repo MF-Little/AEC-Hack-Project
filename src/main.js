@@ -1,5 +1,5 @@
 // Entry point: load a room file, build it, run the walk loop.
-import { S, CONFIG, VARS, registerObjects, newSession } from './state.js';
+import { S, CONFIG, registerObjects, newSession } from './state.js';
 import { $, $$, esc, rng } from './util.js';
 import { renderer, scene, camera, configureSun, resize } from './scene/core.js';
 import { buildShell, built } from './scene/builder.js';
@@ -7,15 +7,15 @@ import { buildFurniture } from './scene/furniture.js';
 import { attachOverlays, clearHeat, pushHeat, setHeatVisible } from './scene/heatmap.js';
 import { applyOption, setLayout, randomLayout, startAutoRotate, stopAutoRotate, tickAutoRotate } from './scene/options.js';
 import { setupControls, move, placeAtStart } from './tracking/controls.js';
-import { track } from './tracking/tracker.js';
+import { track, resetMotion } from './tracking/tracker.js';
 import { addNote, renderNotes } from './tracking/notes.js';
-import { renderPanel, updateLabels, buildLabels } from './ui/panel.js';
+import { renderPanel, updateLabels, buildLabels, buildPins, clearPins, updatePins } from './ui/panel.js';
 import { resetFeed, log } from './ui/feed.js';
 import { setupReport, openReport } from './ui/report.js';
 import { setupPlatform } from './platform.js';
 
 const params = new URLSearchParams(location.search);
-const roomId = (params.get('room') || 'open-loft').replace(/[^a-z0-9-]/gi, '');
+const roomId = (params.get('room') || 'glazing-study').replace(/[^a-z0-9-]/gi, '');
 // ?debug=1 keeps the loop ticking in a hidden tab (for automated test walks) and exposes state.
 const DEBUG = params.get('debug') === '1';
 const nextFrame = DEBUG
@@ -35,12 +35,12 @@ function enterReview() {
   S.review = true;
   document.body.classList.add('reviewing');
   if (built.zoneGroup) built.zoneGroup.visible = false;
-  pushHeat(); setHeatVisible(true);
+  pushHeat(); setHeatVisible(true); buildPins();
 }
 function exitReview() {
   S.review = false;
   document.body.classList.remove('reviewing');
-  setHeatVisible(false);
+  setHeatVisible(false); clearPins();
   if (built.zoneGroup) built.zoneGroup.visible = !S.subject;
   openReport();
 }
@@ -58,23 +58,51 @@ function startWalk({ participant = '', eye = 1.6, styleMode = 'random', layoutMo
   $$('.obtn').forEach(b => b.setAttribute('aria-pressed', S.choice[b.dataset.v] === b.dataset.o));
   buildLabels();
   clearHeat(); setHeatVisible(false); resetFeed(); renderNotes();
-  placeAtStart();
+  if (S.outside) setOutside(false);
+  placeAtStart(); resetMotion();
   S.review = false; document.body.classList.remove('reviewing');
   setSubject(S.subject);
   if (autoRotate && !preview) startAutoRotate(r); else stopAutoRotate();
   S.started = !preview;
-  if (!preview) log('start', null, `Walk started${participant ? ' · ' + participant : ''} · ${room.variables.style.options[style].name} style · layout ${layoutMode}${autoRotate ? ' · auto-rotate on' : ''}`);
+  if (!preview) log('start', null, `Walk started${participant ? ' · ' + participant : ''} · ${room.variables.style.options[style].name} style · layout ${room.lockLayout ? 'fixed' : layoutMode}${autoRotate ? ' · auto-rotate on' : ''}`);
 }
 
 function showStart() { S.started = false; stopAutoRotate(); $('#start').hidden = false; setTimeout(() => $('#pcode').focus(), 50); }
 
 function buildWidget(room) {
   let n = 0;
-  for (const v of VARS) {
-    const d = room.variables[v];
-    $(`#o-${v}`).innerHTML = Object.entries(d.options).map(([id, o]) => { n++; return `<button class="obtn" data-v="${v}" data-o="${id}" aria-pressed="false" title="${esc(o.name)} (key ${n})"><span>${esc(o.short || o.name)}</span>${o.vlt ? `<i>${o.vlt}%</i>` : ''}<kbd>${n}</kbd></button>`; }).join('');
+  for (const v of ['walls', 'glass', 'style']) {
+    const d = room.variables[v], row = $(`#o-${v}`);
+    if (!d || !S.vars.includes(v)) { if (row) row.parentElement.hidden = true; continue; }
+    row.innerHTML = Object.entries(d.options).map(([id, o]) => { n++; return `<button class="obtn" data-v="${v}" data-o="${id}" aria-pressed="false" title="${esc(o.name)} (key ${n})"><span>${esc(o.short || o.name)}</span>${o.vlt ? `<i>${o.vlt}%</i>` : ''}<kbd>${n}</kbd></button>`; }).join('');
   }
   $('#stylesel').innerHTML = '<option value="random">Random</option>' + Object.entries(room.variables.style.options).map(([id, o]) => `<option value="${id}">${esc(o.name)}</option>`).join('');
+  // Locked rooms: hide controls for what doesn't change
+  const styleFixed = !S.vars.includes('style');
+  if (styleFixed) { $('#stylesel').parentElement.hidden = true; $('#randstyle').hidden = true; }
+  if (room.lockLayout) { $('#layoutset').hidden = true; $('#shuf').hidden = true; }
+  if (styleFixed && room.lockLayout) $('#startform .two').hidden = true;
+  if (!room.outsideStart) $('#outbtn').hidden = true;
+  const testedNames = S.vars.map(v => room.variables[v].name.toLowerCase()).join(' and ');
+  $('#autolabel').textContent = `Auto-rotate the ${testedNames} every ${CONFIG.rotateEvery} s (recommended for blind tests in Subject mode)`;
+}
+
+// Facade view: step out into the garden to look at the skin, and back in
+let insidePos = null;
+function setOutside(out) {
+  const room = S.room; if (!room.outsideStart) return;
+  if (out === S.outside) return;
+  if (out) {
+    insidePos = { x: camera.position.x, z: camera.position.z, yaw: S.yaw, pitch: S.pitch };
+    camera.position.set(room.outsideStart.x, S.eye, room.outsideStart.z); S.yaw = room.outsideStart.yaw; S.pitch = 0.08;
+  } else if (insidePos) {
+    camera.position.set(insidePos.x, S.eye, insidePos.z); S.yaw = insidePos.yaw; S.pitch = insidePos.pitch;
+  }
+  S.outside = out; resetMotion();
+  document.body.classList.toggle('outside', out);
+  $('#outbtn').textContent = out ? 'Back inside' : 'Facade view';
+  $('#outbtn').setAttribute('aria-pressed', out);
+  if (S.started) log('swap', null, out ? 'Stepped outside to view the facade' : 'Back inside');
 }
 
 async function boot() {
@@ -89,6 +117,7 @@ async function boot() {
     return;
   }
   S.room = room;
+  S.vars = Object.keys(room.variables).filter(v => !room.variables[v].fixed && Object.keys(room.variables[v].options).length > 1);
   registerObjects(room);
   configureSun(room.sun);
   buildShell(room);
@@ -119,14 +148,16 @@ async function boot() {
     const others = Object.keys(room.variables.style.options).filter(s => s !== S.choice.style);
     applyOption('style', others[Math.floor(Math.random() * others.length)]); e.target.blur();
   };
-  const keyOpts = VARS.flatMap(v => Object.keys(room.variables[v].options).map(o => [v, o]));
+  $('#outbtn').onclick = e => { if (S.started || S.review) setOutside(!S.outside); e.target.blur(); };
+  const keyOpts = S.vars.flatMap(v => Object.keys(room.variables[v].options).map(o => [v, o]));
   addEventListener('keydown', e => {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$('#report').hidden) return;
     if (S.review) { if (e.key === 'Escape') exitReview(); return; }
     if (!S.started) return;
     const n = +e.key;
     if (n >= 1 && n <= keyOpts.length) { const [v, o] = keyOpts[n - 1]; if (S.choice[v] !== o) applyOption(v, o); }
-    if (e.key === 'l' || e.key === 'L') setLayout(randomLayout());
+    if ((e.key === 'l' || e.key === 'L') && !room.lockLayout) setLayout(randomLayout());
+    if (e.key === 'f' || e.key === 'F') setOutside(!S.outside);
   });
   $('#startform').addEventListener('submit', e => {
     e.preventDefault();
@@ -136,7 +167,7 @@ async function boot() {
       participant: $('#pcode').value.trim().slice(0, 24),
       eye: +document.querySelector('input[name="eye"]:checked').value,
       styleMode: $('#stylesel').value,
-      layoutMode: document.querySelector('input[name="layout"]:checked').value,
+      layoutMode: room.lockLayout ? 'default' : document.querySelector('input[name="layout"]:checked').value,
       autoRotate: $('#autorot').checked
     });
   });
@@ -147,7 +178,7 @@ let last = performance.now(), uiTimer = 0;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if ($('#report').hidden) {
-    if (S.review) move(dt);
+    if (S.review) { move(dt); updatePins(); }
     else if (S.started) {
       move(dt); track(dt); tickAutoRotate(dt, CONFIG.rotateEvery);
       uiTimer += dt;

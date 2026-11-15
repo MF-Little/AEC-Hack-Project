@@ -56,9 +56,15 @@ export function move(dt) {
   p.x += (-Math.sin(S.yaw) * f + Math.cos(S.yaw) * s) * sp;
   p.z += (-Math.cos(S.yaw) * f - Math.sin(S.yaw) * s) * sp;
   const { w, d } = S.room.size, c = CONFIG.wallClear;
-  p.x = Math.max(-w / 2 + c, Math.min(w / 2 - c, p.x));
-  p.z = Math.max(-d / 2 + c, Math.min(d / 2 - c, p.z));
-  if (hits(p.x, p.z)) { if (!hits(ox, p.z)) p.x = ox; else if (!hits(p.x, oz)) p.z = oz; else { p.x = ox; p.z = oz; } }
+  if (S.outside) {
+    // In the garden, facing the facade: free walking on the terrace and lawn
+    p.x = Math.max(-w / 2 - 12, Math.min(w / 2 + 12, p.x));
+    p.z = Math.max(d / 2 + 0.9, Math.min(d / 2 + 14.5, p.z));
+  } else {
+    p.x = Math.max(-w / 2 + c, Math.min(w / 2 - c, p.x));
+    p.z = Math.max(-d / 2 + c, Math.min(d / 2 - c, p.z));
+    if (hits(p.x, p.z)) { if (!hits(ox, p.z)) p.x = ox; else if (!hits(p.x, oz)) p.z = oz; else { p.x = ox; p.z = oz; } }
+  }
   p.y = S.eye;
   if (!S.review) S.session.walked += Math.hypot(p.x - ox, p.z - oz);
   camera.rotation.set(S.pitch, S.yaw, 0);

@@ -16,16 +16,60 @@ Open http://localhost:8765 in Chrome. There is no build step. three.js r128 load
 
 | Address | What it does |
 | --- | --- |
-| `/` | The Open Loft, the default room |
+| `/` | The Glazing Study, the default room |
+| `/?room=garden-apartment` | The Garden Apartment with wall, glass and furniture switching |
+| `/?room=open-loft` | The simpler open loft (no interior walls) |
 | `/?room=<name>` | Loads `rooms/<name>.json` |
 | `/?debug=1` | Keeps the loop running in a background tab and exposes state as `window.__gd`, for automated test walks |
 | `/legacy/gaze-decoder-v2.html` | The earlier single-file prototype |
 
 Voice dictation and "Ask Claude" only work when the page runs as a Claude artifact. Elsewhere those buttons stay hidden and typed notes still work.
 
+## The Glazing Study (default)
+
+The Glazing Study is narrowed to one question: **which glass, and why?** It is the Garden Apartment with these changes:
+
+- **A unitized aluminium curtain wall on the sunny south side.** It has 11 modules of 1455 mm running floor to ceiling, 60 x 150 mm mullions with external caps, a transom at 2.7 m, a dark spandrel band at slab level and a stone plinth. **Facade view** (F) steps you into the garden to see the skin from outside.
+- **Punched windows on the north side,** in the same aluminium system.
+- **Glass is the only variable.** It changes on both facades at once, between four products: low-iron clear, neutral solar control, fritted dot and bronze tint. Each product has full metadata: make-up, coating, VLT, g-value, U-value, colour rendering, reflectance, acoustic Rw, thickness, weight, cost, carbon and lead time. Auto-rotate is on by default.
+- **Walls and furniture are fixed:** lime plaster and the Latin set, in one layout. The columns are painted white.
+
+Two rules keep large surfaces from dominating the result:
+
+1. **Compare like with like.** Every glass is judged on the same windows, so size cancels out.
+2. **Count only deliberate looking.** Attention counts only while the view is steady: turning slower than about 20 degrees a second, and moving slower than 0.6 m/s. Sweeping across walls while walking is ignored.
+
+The report leads with:
+
+- the glass to specify, from its own metadata
+- the comparison, scored by steady looking per minute on show, with each remark point moving the score by 25%
+- the four glasses side by side, showing how the person responded against each product's specification
+- a glass explorer that plots any spec value against attention
+- the curtain wall unrolled with heat, plus a module-by-module strip (inside and outside)
+- the comment map
+
+Design traits, the BIM schedule and plan heat sit under **Advanced data**.
+
+## The Garden Apartment
+
+A realistic 16 x 11 m garden apartment with a 3.2 m ceiling. Open living, dining and kitchen take up most of the plan. The apartment also has:
+
+- a front door with an entry beside the kitchen
+- a bathroom and laundry core
+- a bedroom behind a partition with a doorway
+- two exposed concrete columns
+- a kitchen bulkhead with downlights
+- oak floor planks, skirting and stone window sills
+
+The south windows look onto a garden terrace and take direct sun.
+
+**Rendering:** physically based lighting with filmic tone mapping, an atmospheric sky, an environment map for soft ambient light and reflections, soft sun shadows and patches through the windows, and contact shadows under the furniture. Daylight in the room follows the glass VLT.
+
+The four furniture areas move between five spots, so one is always empty. One spot, in the north-west corner, only takes dining, study or nook. The bedroom and kitchen stay fixed and change with the furniture style.
+
 ## The Open Loft
 
-An open-plan home: 16 x 11 m, 3.4 m ceiling, no interior partitions.
+`?room=open-loft` loads the simpler version: 16 x 11 m, 3.4 m ceiling, no interior partitions.
 
 - **North side: four rectangular windows. South side: four arched windows.** Both have the same glass area (3.84 m² each), sill, frame and view outside, so shape is the only difference.
 - **Four furniture areas** (living, dining, study, reading nook) sit on four spots, two near each window wall. A kitchen runs along the east wall.
@@ -60,12 +104,31 @@ An open-plan home: 16 x 11 m, 3.4 m ceiling, no interior partitions.
 - **Captures.** A look held for 2 s or more while standing in an area.
 - **Notes.** Typed or spoken remarks. Each is linked to the element in view, stamped with the options on show, scored for tone and scanned for attribute words.
 
+## Element metadata
+
+Every element and every option in `rooms/garden-apartment.json` carries:
+
+- **BIM properties:** IFC class, Uniclass code, spec section and performance data. For example: VLT, g-value, U-value and colour rendering for glass; light reflectance (LRV) and sound absorption (NRC) for finishes; seat heights and palettes for furniture. Each also has numbers for cost index, embodied carbon and lead time.
+- **Ten design traits, each scored 0 to 1:** curved geometry, natural materials, warmth, texture, brightness, openness, low profile, craft, minimalism and privacy.
+
+Attention is recorded per *element as seen*, for example "Arched windows · fritted glass" or "Walls · oak panelling", so each piece of data belongs to the version that was actually on show.
+
+Every note records where the person stood (x, z, compass heading, eye height), the exact 3D point they were looking at and its distance, the element as seen, and the options on show.
+
 ## The report
 
 - **Profile** and a **glass to specify** with a target VLT.
 - **Four questions**, each with a verdict and a "Your pick" check:
   - Window shape compares attention share, since both shapes are always on show.
   - Wall finish, glass and furniture style compare attention per minute on show. An option needs at least 10 s on show to count.
+- **Design DNA:**
+  - For each trait, how much more (or less) the person centred their view on it than it simply appeared around them.
+  - Which traits the positive and negative remarks clustered on.
+  - Plain findings, for example what the strongest elements had in common.
+- **Trait matrix:** every element as seen, against the ten traits, sorted by preference, with the shared traits marked.
+- **Attribute explorer:** a scatter of any property (light, cost, carbon, NRC, lead time or any trait) against attention per minute on show, with a trend line and correlation.
+- **Comment map:** every note pinned on the plan where it was made, with a sightline to the point being looked at, plus a table of positions and look points. In the 3D review, the notes float as numbered pins.
+- **Element schedule:** BIM classification, key properties, attention, captures, remarks and a preference index for each element as seen. It can be downloaded as CSV.
 - **Attention heat:** the plan heatmap and both window walls, unrolled.
 - **Where time went** (areas and sides of the room), the walk path, and attention by element.
 - **The reading**, with the number behind every line, and **suggested** elements, concepts and materials.

@@ -10,10 +10,11 @@ const sum = a => a.reduce((x, y) => x + y, 0);
 
 // Test definitions straight from the room file (also used to combine saved walks).
 export function testDefs(room) {
+  const vars = Object.entries(room.variables).filter(([v]) => S.vars.includes(v)).map(([v, d]) => ({ id: v, name: d.name, question: d.question, kind: 'swap',
+    options: Object.entries(d.options).map(([id, o]) => ({ id, label: o.name })) }));
+  if (!room.shapeRecs) return vars;
   const shape = { id: 'shape', name: 'Window shape', question: 'Which windows do you prefer?', kind: 'compare',
     options: [{ id: 'W-RECT', label: room.objects['W-RECT'].label }, { id: 'W-CURVE', label: room.objects['W-CURVE'].label }] };
-  const vars = Object.entries(room.variables).map(([v, d]) => ({ id: v, name: d.name, question: d.question, kind: 'swap',
-    options: Object.entries(d.options).map(([id, o]) => ({ id, label: o.name })) }));
   return [shape, ...vars];
 }
 
@@ -22,8 +23,9 @@ function verdict(opts, enough) {
   opts.forEach(o => { o.share = total ? o.score / total : 0; });
   const ranked = opts.slice().sort((a, b) => b.score - a.score);
   if (!enough || ranked.length < 2) return { ranked, status: 'none', margin: 0, winner: null };
-  const margin = ranked[0].share - ranked[1].share;
-  const status = margin >= 0.3 ? 'clear' : margin >= 0.12 ? 'leans' : 'split';
+  // How far the top option is ahead of the runner-up, relative to the top score (works for 2 or 4 options)
+  const margin = ranked[0].score > 0 ? (ranked[0].score - ranked[1].score) / ranked[0].score : 0;
+  const status = margin >= 0.35 ? 'clear' : margin >= 0.12 ? 'leans' : 'split';
   return { ranked, status, margin, winner: status === 'clear' || status === 'leans' ? ranked[0] : null };
 }
 
@@ -42,11 +44,17 @@ function swapTest(room, v) {
   const opts = Object.entries(def.options).map(([id, o]) => {
     const e = ex[id], eligible = e.time >= CONFIG.minShown;
     const rate = eligible ? (e.attn + 1.2 * e.captures) / (e.time / 60) : null;
+    // Each remark point moves the score by 25% (a strong "too dark" can sink a glass that was looked at a lot)
     return { id, label: o.name, lean: o.lean, recs: o.recs, shown: e.time, attn: e.attn, captures: e.captures, sent: e.sentiment, notes: e.notes, rate, eligible,
-      score: eligible ? Math.max(0.01, rate + 6 * e.sentiment) : 0 };
+      score: eligible ? Math.max(0.01, rate * Math.max(0.1, 1 + 0.25 * e.sentiment)) : 0 };
   });
   const el = opts.filter(o => o.eligible);
   return { opts, ...verdict(opts, el.length >= 2 && sum(el.map(o => o.attn)) >= 1), detail: `${el.length} of ${opts.length} shown for ${CONFIG.minShown} s or more` };
+}
+
+// What was on show for the tested variables, e.g. "Glass: Fritted dot"
+export function onShow(choice) {
+  return S.vars.map(v => `${S.room.variables[v].name}: ${S.room.variables[v].options[choice[v]].name}`).join(' · ');
 }
 
 export function decode() {
@@ -71,8 +79,8 @@ export function decode() {
   let glass = null;
   if (T.glass.winner) {
     const g = room.variables.glass.options[T.glass.winner.id];
-    const shape = T.shape.winner ? (T.shape.winner.id === 'W-CURVE' ? 'in arched openings' : 'in rectangular openings') : '';
-    const walls = T.walls.winner ? `set in ${room.variables.walls.options[T.walls.winner.id].name.toLowerCase()} walls` : '';
+    const shape = T.shape && T.shape.winner ? (T.shape.winner.id === 'W-CURVE' ? 'in arched openings' : 'in rectangular openings') : '';
+    const walls = T.walls && T.walls.winner ? `set in ${room.variables.walls.options[T.walls.winner.id].name.toLowerCase()} walls` : '';
     glass = { id: T.glass.winner.id, name: g.name, vlt: g.vlt, full: [g.meta, shape, walls].filter(Boolean).join(', '),
       why: `${g.name} drew ${T.glass.winner.rate.toFixed(0)} attention-seconds per minute on the windows while it was in place${T.glass.winner.sent > 0 ? ', with positive remarks' : ''}.` };
   }
@@ -90,26 +98,32 @@ export function decode() {
   tests.forEach(t => {
     if (t.winner) {
       const r = t.ranked[1];
-      const num = t.kind === 'compare' ? `${Math.round(t.winner.share * 100)}% of window attention (${t.winner.attn.toFixed(1)} s against ${r.attn.toFixed(1)} s)` : `${t.winner.rate.toFixed(0)} attention-s per minute on show, against ${(r.rate || 0).toFixed(0)} for ${r.label.toLowerCase()}`;
-      why.push({ text: `${t.name}: ${t.winner.label} came out ahead with ${num}. That suggests ${t.winner.lean}.`, src: `${t.status === 'clear' ? 'clear preference' : 'leaning'} · ${t.detail}` });
+      let num;
+      if (t.kind === 'compare') num = `with ${Math.round(t.winner.share * 100)}% of window attention (${t.winner.attn.toFixed(1)} s against ${r.attn.toFixed(1)} s)`;
+      else if ((r.rate || 0) > t.winner.rate && t.winner.sent > r.sent) num = `on remarks: a little less steady looking than ${r.label.toLowerCase()} (${t.winner.rate.toFixed(0)} vs ${(r.rate || 0).toFixed(0)} s/min), but warmer remarks (${t.winner.sent > 0 ? '+' : ''}${t.winner.sent} vs ${r.sent > 0 ? '+' : ''}${r.sent})`;
+      else num = `with ${t.winner.rate.toFixed(0)} s of steady looking per minute on show, against ${(r.rate || 0).toFixed(0)} for ${r.label.toLowerCase()}${t.winner.sent ? `, and remarks of ${t.winner.sent > 0 ? '+' : ''}${t.winner.sent}` : ''}`;
+      why.push({ text: `${t.name}: ${t.winner.label} came out ahead ${num}. That suggests ${t.winner.lean}.`, src: `${t.status === 'clear' ? 'clear preference' : 'leaning'} · ${t.detail}` });
     } else if (t.status === 'split') why.push({ text: `${t.name}: no clear difference between the options.`, src: t.detail });
     else why.push({ text: `${t.name}: not enough data yet. ${t.kind === 'swap' ? `Show at least two options for ${CONFIG.minShown} s each (use the Design options panel or auto-rotate).` : 'Look at both window walls for a few seconds.'}`, src: t.detail, warn: true });
   });
   if (sideTotal > 10) {
     const south = halves.south / sideTotal;
-    why.push({ text: `You spent ${Math.round(south * 100)}% of your time on the arched-window side and ${Math.round((1 - south) * 100)}% on the rectangular side.`, src: 'time by half of the room' });
+    const nm = id => (S.objects[id] || { name: 'windows' }).name.toLowerCase();
+    why.push({ text: `You spent ${Math.round(south * 100)}% of your time on the ${nm(room.facades.south.id)} side and ${Math.round((1 - south) * 100)}% on the ${nm(room.facades.north.id)} side.`, src: 'time by half of the room' });
   }
   if (areas[0] && areas[0].dwell >= 3) {
     const a = areas[0];
-    why.push({ text: `You spent longest in the ${a.name.toLowerCase()} area (${fmt(a.dwell)}), which was ${a.side ? `on the ${a.side === 'N' ? 'rectangular' : 'arched'}-window side` : 'by the kitchen'} in this layout.`, src: `${a.visits} visit${a.visits === 1 ? '' : 's'}` });
+    why.push({ text: `You spent longest in the ${a.name.toLowerCase()} area (${fmt(a.dwell)}), which was ${a.side ? `on the ${(S.objects[room.facades[a.side === 'N' ? 'north' : 'south'].id] || { name: 'window' }).name.toLowerCase()} side` : 'by the kitchen'} in this layout.`, src: `${a.visits} visit${a.visits === 1 ? '' : 's'}` });
   }
   const noteWhy = ses.notes.map(n => {
     const o = n.target ? S.objects[n.target] : null;
     const tone = n.sentiment > 0 ? 'positive' : n.sentiment < 0 ? 'negative' : 'neutral';
-    const showing = `walls: ${room.variables.walls.options[n.choice.walls].name.toLowerCase()}, glass: ${room.variables.glass.options[n.choice.glass].name.toLowerCase()}, style: ${room.variables.style.options[n.choice.style].name}`;
+    const showing = onShow(n.choice);
     if (!o) return { text: `You said “${n.text}” while not looking at a tagged element. On show: ${showing}.`, src: `${tone} · ${n.source}`, note: true };
-    const facts = Object.entries(o.meta).filter(([k]) => n.cues.includes(k) || (n.cues.includes('Geometry') && k === 'Geometry')).map(([k, v]) => `${k.toLowerCase()}: ${v}`);
-    if (!facts.length) facts.push(...Object.entries(o.meta).slice(0, 2).map(([k, v]) => `${k.toLowerCase()}: ${v}`));
+    const metaThen = { ...o.meta };
+    if (o.kind === 'window' && room.variables.glass && n.choice.glass) metaThen.Glass = room.variables.glass.options[n.choice.glass].meta;
+    const facts = Object.entries(metaThen).filter(([k]) => n.cues.includes(k) || (n.cues.includes('Geometry') && k === 'Geometry')).map(([k, v]) => `${k.toLowerCase()}: ${v}`);
+    if (!facts.length) facts.push(...Object.entries(metaThen).slice(0, 2).map(([k, v]) => `${k.toLowerCase()}: ${v}`));
     return { text: `You said “${n.text}” while looking at the ${o.name.toLowerCase()}. The app knows its ${facts.join('; ')}.`, src: `${tone} remark · ${n.source} · ${showing}`, note: true };
   });
   const statedN = tests.filter(t => t.agree !== null);
@@ -132,7 +146,7 @@ export function exportData(d) {
     layouts: ses.layouts,
     glass_preferred: d.glass ? { glass: d.glass.name, vlt: d.glass.vlt } : null,
     objects: Object.fromEntries(Object.entries(S.objects).map(([id, o]) => [id, { name: o.name, attention: +o.s.attn.toFixed(2), gaze_s: +o.s.gaze.toFixed(1), captures: o.s.captures }])),
-    notes: ses.notes.map(n => ({ t: n.t, text: n.text, source: n.source, target: n.target, zone: n.zone, on_show: n.choice, sentiment: n.sentiment, cues: n.cues })),
+    notes: ses.notes.map(n => ({ n: n.n, t: n.t, text: n.text, source: n.source, stood_at: n.pos, looking_at: n.target, look_point: n.look, element_as_seen: n.inst, zone: n.zone, on_show: n.choice, sentiment: n.sentiment, cues: n.cues })),
     captures: ses.captures,
     heat: topCells(400).map(c => [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2), +c.w.toFixed(2), c.tag]),
     path: ses.path

@@ -7,10 +7,14 @@ import { built } from '../scene/builder.js';
 import { SAMPLES, WSUM, deposit } from '../scene/heatmap.js';
 import { log, toast } from '../ui/feed.js';
 import { zoneStats } from '../state.js';
+import { instKey, activeKeys, blankInst } from '../decoder/instances.js';
+
+const inst = k => S.session.inst[k] || (S.session.inst[k] = blankInst());
 
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
-let pathTimer = 0, frame = 0;
+let pathTimer = 0, frame = 0, prev = null, angS = 0, spdS = 0;
+export function resetMotion() { prev = null; angS = 0; spdS = 0; }
 
 // Which variable an object belongs to: walls -> wall finish, windows -> glass, furniture -> style.
 const VAR_OF = { wall: 'walls', window: 'glass', furniture: 'style' };
@@ -51,8 +55,21 @@ export function track(dt) {
   }
   const zone = currentZone();
 
+  // Deliberate looking: only a steady view counts. Sweeping across walls while walking or turning doesn't.
+  if (prev) {
+    const ang = (Math.abs(S.yaw - prev.yaw) + Math.abs(S.pitch - prev.pitch)) / dt;
+    const spd = Math.hypot(p.x - prev.x, p.z - prev.z) / dt;
+    angS = angS * 0.8 + Math.min(ang, 6) * 0.2; spdS = spdS * 0.8 + Math.min(spd, 6) * 0.2;
+  }
+  prev = { yaw: S.yaw, pitch: S.pitch, x: p.x, z: p.z };
+  const steady = angS < CONFIG.steadyTurn && spdS < CONFIG.steadyMove;
+  S.deliberate = steady;
+  ses.look[steady ? 'deliberate' : 'passing'] += dt;
+  if (S.outside) ses.look.outside += dt;
+
   // Exposure clocks: every option currently on show gains time.
   for (const [v, id] of Object.entries(S.choice)) ses.exposure[v][id].time += dt;
+  for (const k of activeKeys()) inst(k).time += dt;
 
   // Centre-weighted attention. Outer rings are sampled every other frame (with double time).
   let hit = null;
@@ -66,8 +83,12 @@ export function track(dt) {
     if (i === 0) hit = h;
     if (!h) continue;
     const tg = h.object.userData.tag, o = S.objects[tg], a = w * t / WSUM;
-    o.s.attn += a;
+    const I = inst(instKey(tg)); I.vis += t / SAMPLES.length;               // merely in view: always counted
+    if (!steady) { o.s.passing = (o.s.passing || 0) + a; continue; }        // sweeping past: not counted as attention
+    o.s.attn += a; I.attn += a;
     const v = varOf(o); if (v) ses.exposure[v][S.choice[v]].attn += a;
+    const part = h.object.userData.part;
+    if (part) { const pt = ses.parts[part] || (ses.parts[part] = { in: 0, out: 0 }); pt[S.outside ? 'out' : 'in'] += a; }
     deposit(h.point, w * t, tg);
   }
 
@@ -76,9 +97,12 @@ export function track(dt) {
   if (!tag) return;
   const o = S.objects[tag];
   S.gaze.t += dt; S.gaze.dist = hit.distance; o.s.gaze += dt;
+  S.gaze.point = { x: +hit.point.x.toFixed(2), y: +hit.point.y.toFixed(2), z: +hit.point.z.toFixed(2) };
+  inst(instKey(tag)).gaze += dt;
+  S.gaze.part = hit.object.userData.part || null;
   o.s.minDist = Math.min(o.s.minDist, hit.distance);
   if (!S.gaze.captured && S.gaze.t >= CONFIG.captureAfter && zone) {
-    S.gaze.captured = true; o.s.captures++;
+    S.gaze.captured = true; o.s.captures++; inst(instKey(tag)).captures++;
     const v = varOf(o); if (v) ses.exposure[v][S.choice[v]].captures++;
     ses.captures.push({ x: +p.x.toFixed(2), z: +p.z.toFixed(2), tag, zone: zone.id, t: +ses.elapsed.toFixed(1), choice: { ...S.choice } });
     const msg = `Captured ${o.name} · ${hit.distance.toFixed(1)} m · in ${zone.name.toLowerCase()} area`;

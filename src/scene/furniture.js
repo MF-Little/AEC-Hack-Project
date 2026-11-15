@@ -3,7 +3,7 @@
 // and turned to face whichever side of the room it sits on.
 import * as THREE from 'three';
 import { scene } from './core.js';
-import { palette } from './materials.js';
+import { palette, blobMat } from './materials.js';
 import { built, edges, tagMesh, mergeTargets } from './builder.js';
 import { attachOverlays } from './heatmap.js';
 import { S, CONFIG } from '../state.js';
@@ -24,7 +24,7 @@ const legs4 = (g, mat, tag, x, z, h, r = 0.015) => [[-x, -z], [x, -z], [-x, z], 
 function plant(g, p, tag, x, z, big = 1) {
   P(g, C(0.22 * big, 0.17 * big, 0.4 * big, 18), p.pot, x, 0.2 * big, z, tag);
   P(g, C(0.02, 0.03, 0.9 * big, 6), p.wood, x, 0.4 * big + 0.45 * big, z, tag, { edge: false });
-  P(g, new THREE.IcosahedronGeometry(0.42 * big, 0), p.plant, x, 1.35 * big, z, tag, { sy: 1.3 });
+  P(g, new THREE.IcosahedronGeometry(0.42 * big, 1), p.plant, x, 1.35 * big, z, tag, { sy: 1.3 });
 }
 function agave(g, p, tag, x, z) {
   P(g, C(0.32, 0.25, 0.55, 18), p.pot, x, 0.275, z, tag);
@@ -175,6 +175,43 @@ function nook(g, p, st, T) {
   return [[-0.95, 0.95, -0.5, 0.65]];
 }
 
+// Soft contact shadows: a blurred dark patch under each footprint, so pieces sit on the floor.
+function blobs(g, rects, y = 0.018) {
+  rects.forEach(([x0, x1, z0, z1]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry((x1 - x0) * 1.3, (z1 - z0) * 1.3), blobMat);
+    m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.renderOrder = 1;
+    g.add(m);
+  });
+}
+
+// Bedroom, fixed behind its partition. Built in world coordinates from room.bedroom.
+function bedroom(g, p, st, room) {
+  const T = 'F-BEDROOM', b = room.bedroom, bx = b.x0 + 1.12, bz = (b.z0 + b.z1) / 2 + 0.05;
+  P(g, B(1.8, 0.012, 2.4), p.rug, bx + 0.7, 0.008, bz, T, { shadow: false });
+  if (st === 'japanese') {
+    P(g, B(2.2, 0.15, 1.8), p.wood, bx, 0.075, bz, T);
+    P(g, B(2.0, 0.14, 1.5), p.linen, bx, 0.22, bz, T);
+    P(g, B(1.4, 0.06, 1.52), p.fabric, bx + 0.3, 0.32, bz, T);
+    [-0.38, 0.38].forEach(dz => P(g, B(0.35, 0.1, 0.6), p.linen, bx - 0.75, 0.34, bz + dz, T));
+  } else {
+    const base = st === 'latin' ? p.wood : p.fabric;
+    P(g, B(2.1, 0.32, 1.7), base, bx, 0.2, bz, T);
+    P(g, B(2.0, 0.22, 1.6), p.linen, bx, 0.47, bz, T);
+    P(g, B(1.3, 0.06, 1.64), st === 'latin' ? p.fabric : p.accent, bx + 0.35, 0.6, bz, T);
+    P(g, B(0.1, st === 'latin' ? 1.25 : 0.95, 1.8), base, bx - 1.06, st === 'latin' ? 0.62 : 0.48, bz, T);
+    [-0.38, 0.38].forEach(dz => P(g, B(0.4, 0.12, 0.62), p.linen, bx - 0.72, 0.63, bz + dz, T));
+  }
+  [-1.15, 1.15].forEach(dz => {
+    P(g, B(0.45, st === 'japanese' ? 0.3 : 0.5, 0.42), p.wood, b.x0 + 0.3, st === 'japanese' ? 0.15 : 0.25, bz + dz, T);
+    P(g, C(0.11, 0.14, 0.22, 18), p.paper, b.x0 + 0.3, st === 'japanese' ? 0.42 : 0.62, bz + dz, T);
+  });
+  P(g, B(2.4, 2.3, 0.6), st === 'scandi' ? p.accent : p.wood, (b.x0 + b.x1) / 2 - 0.4, 1.15, b.z0 + 0.32, T);
+  const rects = [[b.x0, b.x0 + 2.25, bz - 0.9, bz + 0.9], [b.x0, b.x0 + 0.55, bz - 1.4, bz - 0.9], [b.x0, b.x0 + 0.55, bz + 0.9, bz + 1.4], [(b.x0 + b.x1) / 2 - 1.6, (b.x0 + b.x1) / 2 + 0.8, b.z0, b.z0 + 0.62]];
+  blobs(g, rects);
+  rects.forEach(r => built.furnColliders.push(r));
+  built.anchors[T] = new THREE.Vector3(bx + 0.5, 1.5, bz);
+}
+
 const AREAS = { living, dining, study, nook };
 const PIECES = {
   japanese: { living: 'Low platform sofa, low oak table, floor cushions, shoji screen, paper lantern', dining: 'Slim oak table, four light chairs, paper lantern pendant', study: 'Trestle desk, oak chair, ladder shelf', nook: 'Floor cushion, low side table, bonsai, lantern', kitchen: 'Hinoki-tone fronts, pale tops' },
@@ -182,6 +219,7 @@ const PIECES = {
   scandi: { living: 'Grey wool sofa on slim legs, oval ash table, floor lamp, fiddle-leaf plant', dining: 'Round ash table, four slim chairs, white dome pendant', study: 'White desk, shell chair, low ash shelf', nook: 'Lounge chair, small white table, plant', kitchen: 'White fronts, ash tops' }
 };
 const NAMES = { living: 'Living', dining: 'Dining', study: 'Study', nook: 'Nook', kitchen: 'Kitchen' };
+const BED = { japanese: 'Low oak platform, futon and linen, paper lamps', latin: 'Walnut bed with tall headboard, terracotta throw', scandi: 'Upholstered grey bed, white bedding, ash bedside tables' };
 
 function kitchen(g, p, st, W) {
   const T = 'F-KITCHEN';
@@ -194,7 +232,9 @@ function kitchen(g, p, st, W) {
   P(g, B(1.0, 0.9, 2.4), front, 5.4, 0.45, 0, T);
   P(g, B(1.05, 0.05, 2.5), top, 5.4, 0.925, 0, T);
   [-0.7, 0, 0.7].forEach(z => { P(g, C(0.18, 0.18, 0.05, 20), top, 4.6, 0.65, z, T); P(g, C(0.02, 0.02, 0.63, 8), p.dark, 4.6, 0.315, z, T, { edge: false }); });
-  built.furnColliders.push([xw - 0.7, xw, -2.25, 2.25], [4.85, 5.95, -1.25, 1.25], [4.38, 4.82, -0.92, 0.92]);
+  const kr = [[xw - 0.7, xw, -2.25, 2.25], [4.85, 5.95, -1.25, 1.25], [4.38, 4.82, -0.92, 0.92]];
+  built.furnColliders.push(...kr);
+  blobs(g, kr.slice(0, 2));
   built.anchors[T] = new THREE.Vector3(5.4, 1.6, 0);
 }
 
@@ -213,16 +253,23 @@ export function buildFurniture(style, layout) {
     furnRoot.add(g);
     const tag = 'F-' + area.toUpperCase();
     const rects = AREAS[area](g, p, style, tag);
+    blobs(g, rects);
     rects.forEach(([x0, x1, z0, z1]) => built.furnColliders.push(turn ? [spot.x - x1, spot.x - x0, spot.z - z1, spot.z - z0] : [spot.x + x0, spot.x + x1, spot.z + z0, spot.z + z1]));
     built.anchors[tag] = new THREE.Vector3(spot.x, 1.9, spot.z);
     const o = S.objects[tag];
-    o.meta = { Style: room.variables.style.options[style].name, Pieces: PIECES[style][area], Location: `${spot.id} spot, facing the ${spot.face === 'N' ? 'rectangular' : 'arched'} windows` };
+    o.meta = { Style: room.variables.style.options[style].name, Pieces: PIECES[style][area], Location: `${spot.id} spot, facing the ${(S.objects[room.facades[spot.face === 'N' ? 'north' : 'south'].id] || { name: 'windows' }).name.toLowerCase()}` };
     S.zones.push({ id: 'Z-' + area.toUpperCase(), name: NAMES[area], area, spot: spot.id, side: spot.face, x: spot.x, z: spot.z, r: CONFIG.zoneR });
   }
   kitchen(furnRoot, p, style, room.size.w);
   S.objects['F-KITCHEN'].meta = { Style: room.variables.style.options[style].name, Pieces: PIECES[style].kitchen, Location: 'East wall, fixed' };
   const kz = room.kitchen.zone;
   S.zones.push({ id: 'Z-KITCHEN', name: 'Kitchen', area: 'kitchen', spot: 'E', side: null, x: kz.x, z: kz.z, r: kz.r });
+  if (room.bedroom && S.objects['F-BEDROOM']) {
+    bedroom(furnRoot, p, style, room);
+    S.objects['F-BEDROOM'].meta = { Style: room.variables.style.options[style].name, Pieces: BED[style], Location: 'Behind the partition, on the south facade' };
+    const bz = room.bedroom.zone;
+    S.zones.push({ id: 'Z-BEDROOM', name: 'Bedroom', area: 'bedroom', spot: 'BR', side: 'S', x: bz.x, z: bz.z, r: bz.r });
+  }
 
   // Zone rings (observer only)
   built.zoneGroup = new THREE.Group(); furnRoot.add(built.zoneGroup); built.zoneFills = {};
