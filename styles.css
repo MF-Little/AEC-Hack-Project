@@ -39,6 +39,10 @@ body.locked .cross::before,body.locked .cross::after{background:var(--signal);op
 .seg{display:flex;border:1px solid var(--ink);background:var(--glass)}
 .seg button{border:0;background:transparent;padding:7px 11px;font-size:12px;font-weight:500;letter-spacing:.02em}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+/* study switch: Glazing | Egress */
+.seg.studies a{padding:7px 11px;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink);text-decoration:none}
+.seg.studies a[aria-current="page"]{background:var(--signal);color:#fff}
+.seg.studies a:not([aria-current]):hover{background:var(--signal-soft)}
 .btn{border:1px solid var(--ink);background:var(--glass);padding:7px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
 .btn.primary{background:var(--ink);color:var(--paper)}
 .btn.signal{background:var(--signal);border-color:var(--signal);color:#fff}

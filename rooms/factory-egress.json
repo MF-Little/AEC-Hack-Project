@@ -1,0 +1,115 @@
+{
+  "id": "factory-egress",
+  "name": "Factory Egress",
+  "summary": "Level 1 production hall, 40 × 26 m, night shift, 3 exits",
+  "task": "Night shift. The fire alarm is sounding. Leave the building by the nearest safe exit. Lifts and loading doors are not escape routes.",
+  "level": "Level 1 (+5.0 m above the yard)",
+  "size": { "w": 40, "d": 26, "h": 8.5 },
+  "bounds": [-20, 20, -13, 13],
+  "timeLimit": 180,
+
+  "exits": [
+    { "id": "EX-A", "name": "Stair A (protected stair)", "kind": "stair", "core": [15, 20, -13, -8],
+      "door": { "x": 17.5, "z": -8, "face": "S", "w": 1.2 },
+      "props": { "Type": "Protected stair, fire door FD60S", "Width": "1200 mm clear", "Hardware": "Push bar (EN 1125)", "Leads to": "Ground floor final exit, north yard", "IFC": "IfcDoor · FIREEXIT" } },
+    { "id": "EX-B", "name": "Stair B (protected stair)", "kind": "stair", "core": [15, 20, 8, 13],
+      "door": { "x": 17.5, "z": 8, "face": "N", "w": 1.2 },
+      "props": { "Type": "Protected stair, fire door FD60S", "Width": "1200 mm clear", "Hardware": "Push bar (EN 1125)", "Leads to": "Ground floor final exit, south yard", "IFC": "IfcDoor · FIREEXIT" } },
+    { "id": "EX-C", "name": "External escape door", "kind": "external",
+      "door": { "x": -2, "z": -13, "face": "S", "w": 1.0 },
+      "props": { "Type": "Steel escape door to external stair", "Width": "1000 mm clear", "Hardware": "Push bar (EN 1125)", "Leads to": "External steel stair to the north yard", "IFC": "IfcDoor · FIREEXIT" } }
+  ],
+
+  "decoys": [
+    { "id": "D-OLD", "name": "Former exit door (sealed)", "kind": "sealed", "door": { "x": -20, "z": 0, "face": "E", "w": 1.0, "h": 2.1 },
+      "msg": "This door is sealed shut.",
+      "props": { "Status": "Sealed during the 2019 office fit-out", "Note": "Old exit sign SG-09 still points here", "IFC": "IfcDoor · NOTDEFINED" } },
+    { "id": "LIFT", "name": "Goods lift", "kind": "lift", "door": { "x": -6, "z": 13, "face": "N", "w": 2.0, "h": 2.4 },
+      "msg": "The lift is out of service: fire alarm recall.",
+      "props": { "Type": "Goods lift, 2000 kg", "In fire": "Returns to ground and stays closed", "IFC": "IfcTransportElement · ELEVATOR" } },
+    { "id": "OFFICE", "name": "Shift office door", "kind": "office", "door": { "x": -14, "z": 7, "face": "N", "w": 0.9, "h": 2.1 },
+      "msg": "The office is locked. It is not a way out.",
+      "props": { "Type": "Office door, locked out of hours", "IFC": "IfcDoor · DOOR" } },
+    { "id": "SH-1", "name": "Loading shutter 1", "kind": "shutter", "door": { "x": 8, "z": 13, "face": "N", "w": 3.6, "h": 4.2 },
+      "msg": "The loading shutter is down and will not open.",
+      "props": { "Type": "Insulated roller shutter, powered", "In fire": "Not an escape route", "IFC": "IfcDoor · ROLLINGDOOR" } },
+    { "id": "SH-2", "name": "Loading shutter 2", "kind": "shutter", "door": { "x": 12.5, "z": 13, "face": "N", "w": 3.6, "h": 4.2 },
+      "msg": "The loading shutter is down and will not open.",
+      "props": { "Type": "Insulated roller shutter, powered", "In fire": "Not an escape route", "IFC": "IfcDoor · ROLLINGDOOR" } }
+  ],
+
+  "office": { "id": "OFFICE-BLK", "name": "Shift office", "rect": [-20, -12, 7, 13], "h": 3.2 },
+
+  "racks": [
+    { "id": "R1a", "rect": [-14, -3, -13, -11.9], "deep": 1 },
+    { "id": "R1b", "rect": [-1, 3, -13, -11.9], "deep": 1 },
+    { "id": "R2",  "rect": [-13, 3, -9.3, -7.1], "deep": 2 },
+    { "id": "R3a", "rect": [-13, -6.5, -4.6, -2.4], "deep": 2 },
+    { "id": "R3b", "rect": [-5, 3, -4.6, -2.4], "deep": 2 },
+    { "id": "R4a", "rect": [-13, -6.5, 0.1, 2.3], "deep": 2 },
+    { "id": "R4b", "rect": [-5, 3, 0.1, 2.3], "deep": 2 },
+    { "id": "R5",  "rect": [-10, 2, 8.6, 9.7], "deep": 1 }
+  ],
+  "rackSpec": { "height": 6.0, "beams": [1.6, 3.2, 4.8], "bay": 2.7,
+    "props": { "Type": "Adjustable pallet racking", "Height": "6.0 m, 3 beam levels", "Bay": "2.7 m", "Load": "1000 kg pallets", "Standard": "EN 15512 / EN 15635", "IFC": "IfcFurniture · SHELF" } },
+
+  "blocks": [
+    { "id": "PB-1", "name": "Pallet stack (blocks aisle)", "kind": "pallets", "rect": [-15, -13, -2.4, 0.1], "h": 1.9 },
+    { "id": "CNC-1", "name": "CNC machining centre", "kind": "machine", "rect": [6, 9, -7.6, -5.4], "h": 2.6 },
+    { "id": "CNC-2", "name": "CNC machining centre", "kind": "machine", "rect": [10, 13, -7.6, -5.4], "h": 2.6 },
+    { "id": "CNC-3", "name": "CNC lathe", "kind": "machine", "rect": [6, 9, -11.6, -9.4], "h": 2.2 },
+    { "id": "PRESS", "name": "Hydraulic press", "kind": "press", "rect": [10.3, 12.7, -11.8, -9.4], "h": 3.4 },
+    { "id": "CONV", "name": "Roller conveyor", "kind": "conveyor", "rect": [5, 14.5, -1.45, -0.55], "h": 0.95 },
+    { "id": "CELL", "name": "Robot welding cell", "kind": "fence", "rect": [8, 13.5, 2.5, 6], "h": 2.2 },
+    { "id": "FORK", "name": "Forklift (parked)", "kind": "forklift", "rect": [0, 1.2, 4, 6.6], "h": 2.2 },
+    { "id": "PAL-2", "name": "Pallet stack", "kind": "pallets", "rect": [-9.6, -8.4, 4.5, 5.5], "h": 1.4 },
+    { "id": "PAL-3", "name": "Pallet stack", "kind": "pallets", "rect": [3, 4.2, 9.5, 10.5], "h": 1.6 },
+    { "id": "PAL-4", "name": "Pallet stack", "kind": "pallets", "rect": [-11.6, -10.6, 3.8, 4.8], "h": 1.2 }
+  ],
+  "columns": { "xs": [-12, -4, 4, 12], "zs": [-8.2, 1.2], "size": 0.4 },
+
+  "deadEnds": [
+    { "id": "DE-1", "name": "Aisle R3–R4, west end (blocked by pallets)", "rect": [-13, -6.5, -2.4, 0.1] }
+  ],
+
+  "collapseSites": [
+    { "id": "CS-1", "rect": [-10.6, -8.8, -11.9, -9.3], "axis": "x" },
+    { "id": "CS-2", "rect": [-0.2, 1.6, -11.9, -9.3], "axis": "x" },
+    { "id": "CS-3", "rect": [-10.6, -8.8, -7.1, -4.6], "axis": "x" },
+    { "id": "CS-4", "rect": [-1.6, 0.2, -7.1, -4.6], "axis": "x" },
+    { "id": "CS-5", "rect": [-6.5, -5, -4.6, -2.4], "axis": "z" },
+    { "id": "CS-6", "rect": [-6.5, -5, 0.1, 2.3], "axis": "z" },
+    { "id": "CS-7", "rect": [-1.6, 0.2, -2.4, 0.1], "axis": "x" },
+    { "id": "CS-8", "rect": [-3.4, -1.6, 9.7, 13], "axis": "x" },
+    { "id": "CS-9", "rect": [-9.4, -7.6, 9.7, 13], "axis": "x" }
+  ],
+
+  "signs": [
+    { "id": "SG-01", "name": "Exit sign over Stair A", "kind": "exit", "x": 17.5, "y": 2.55, "z": -7.97, "face": "S", "points": "N", "mount": "wall", "illum": "internal", "size": [400, 200], "exit": "EX-A" },
+    { "id": "SG-02", "name": "Exit sign over Stair B", "kind": "exit", "x": 17.5, "y": 2.55, "z": 7.97, "face": "N", "points": "S", "mount": "wall", "illum": "internal", "size": [400, 200], "exit": "EX-B" },
+    { "id": "SG-03", "name": "Exit sign over external door", "kind": "exit", "x": -2, "y": 2.45, "z": -12.97, "face": "S", "points": "N", "mount": "wall", "illum": "photolum", "size": [300, 150], "exit": "EX-C" },
+    { "id": "SG-04", "name": "Hanging sign, aisle R1–R2", "kind": "exit", "x": -8, "y": 3.2, "z": -10.6, "face": "EW", "points": "E", "mount": "hanging", "illum": "internal", "size": [400, 200] },
+    { "id": "SG-05", "name": "Hanging sign, south cross-aisle", "kind": "exit", "x": -5.75, "y": 3.2, "z": 4.2, "face": "NS", "points": "E", "mount": "hanging", "illum": "internal", "size": [400, 200] },
+    { "id": "SG-06", "name": "Hanging sign, production west", "kind": "exit", "x": 4.6, "y": 3.2, "z": -3.5, "face": "EW", "points": "N", "mount": "hanging", "illum": "internal", "size": [400, 200] },
+    { "id": "SG-07", "name": "Hanging sign, aisle R2–R3", "kind": "exit", "x": -9, "y": 3.2, "z": -5.85, "face": "EW", "points": "W", "mount": "hanging", "illum": "internal", "size": [400, 200] },
+    { "id": "SG-08", "name": "Low-level wayfinding sign", "kind": "exit", "x": -9.5, "y": 0.45, "z": 12.97, "face": "N", "points": "E", "mount": "low", "illum": "photolum", "size": [300, 150] },
+    { "id": "SG-09", "name": "Old text exit sign", "kind": "text", "x": -15.5, "y": 3.0, "z": -1.15, "face": "EW", "points": "W", "mount": "hanging", "illum": "none", "size": [500, 200], "flags": ["legacy", "points to sealed door"] },
+    { "id": "SG-10", "name": "Lift: do not use in fire", "kind": "nolift", "x": -3.9, "y": 1.7, "z": 12.97, "face": "N", "points": null, "mount": "wall", "illum": "none", "size": [300, 300] },
+    { "id": "SG-11", "name": "No exit sign on sealed door", "kind": "noexit", "x": -19.97, "y": 2.3, "z": 0, "face": "E", "points": null, "mount": "wall", "illum": "none", "size": [400, 150] },
+    { "id": "SG-12", "name": "High sign above racking", "kind": "exit", "x": -4, "y": 6.6, "z": 1.45, "face": "S", "points": "E", "mount": "column", "illum": "internal", "size": [600, 300], "flags": ["mounted above racking"] },
+    { "id": "SG-13", "name": "Hanging sign, production east", "kind": "exit", "x": 15.2, "y": 3.2, "z": -3.6, "face": "NS", "points": "N", "mount": "hanging", "illum": "internal", "size": [400, 200] },
+    { "id": "SG-14", "name": "Hanging sign, loading area", "kind": "exit", "x": 9.5, "y": 3.2, "z": 9.2, "face": "EW", "points": "E", "mount": "hanging", "illum": "internal", "size": [400, 200] }
+  ],
+
+  "signTypes": {
+    "exit":   { "Pictogram": "ISO 7010 E001 (running figure) with arrow", "Standard": "ISO 7010 / BS 5499-4", "Colour": "Safety green, white symbol" },
+    "text":   { "Pictogram": "Text only, \"EXIT\" with arrow", "Standard": "Superseded (pre-ISO 7010)", "Colour": "Green, white text" },
+    "nolift": { "Pictogram": "Prohibition with lift symbol", "Standard": "ISO 7010 style supplementary sign", "Colour": "White, red ring" },
+    "noexit": { "Pictogram": "Text, \"NO EXIT\"", "Standard": "Supplementary sign", "Colour": "Red, white text" }
+  },
+  "illumTypes": {
+    "internal": { "Illumination": "Internally illuminated LED, maintained", "Emergency duration": "3 h battery", "Z factor": 200 },
+    "photolum": { "Illumination": "Photoluminescent (glows after light)", "Emergency duration": "Afterglow only", "Z factor": 100 },
+    "none":     { "Illumination": "Not illuminated", "Emergency duration": "None", "Z factor": 100 }
+  }
+}

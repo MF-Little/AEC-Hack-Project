@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Factory Egress</title>
+<meta name="description" content="Visual Vibes egress study: find your way out of a factory in an emergency while the app records your route, hesitations and which exit signs you actually looked at.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="src/egress/egress.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js" } }
+</script>
+</head>
+<body class="egress subject">
+<canvas id="scene" aria-label="First-person view inside the factory"></canvas>
+<div class="cross" aria-hidden="true"></div>
+<div id="vignette" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="brand"><b>Visual Vibes</b><span><em>Factory Egress</em> · Drag to look · WASD or arrows to walk · Enter to note</span></div>
+  <div class="controls">
+    <nav class="seg studies" aria-label="Study"><a href="index.html">Glazing</a><a href="egress.html" aria-current="page">Egress</a></nav>
+    <span class="eclock mono" id="eclock" aria-live="off">0:00</span>
+    <div class="seg" role="group" aria-label="View mode">
+      <button id="m-obs" aria-pressed="false" title="Show what the app tracks">Observer</button>
+      <button id="m-sub" aria-pressed="true" title="Hide tracking for a real test">Subject</button>
+    </div>
+    <button class="btn" id="soundbtn" aria-pressed="true" title="Alarm sound">Sound on</button>
+    <button class="btn logbtn" id="logbtn">Log</button>
+    <button class="btn primary" id="endbtn">End run</button>
+  </div>
+</header>
+
+<div id="reviewbar"><span class="rec">Review · heat shows where steady looking landed · blue line is the route walked, green the shortest</span><button class="btn primary" id="backreport">Back to report</button></div>
+
+<aside id="panel" aria-label="Observer panel">
+  <div class="ph"><h2>Observer</h2><span class="rec" id="clock">0:00</span></div>
+  <div class="pbody">
+    <div class="sec"><h3>Run</h3><dl class="meta" id="runmeta"></dl></div>
+    <div class="sec"><h3>Looking at</h3><div class="now" id="now"><span class="k">nothing tagged</span></div><dl class="meta" id="nowmeta"></dl></div>
+    <div class="sec"><h3>Route · live</h3><canvas id="plan" style="height:190px"></canvas></div>
+    <div class="sec"><h3>Exit signs</h3><div id="signlist"></div></div>
+    <div class="sec"><h3>Event log</h3><ul id="feed"><li class="empty">The run has not started.</li></ul></div>
+  </div>
+</aside>
+
+<form id="notebar" autocomplete="off">
+  <div class="field"><input id="note" type="text" placeholder="Say what you notice… “can't see an exit”, “this sign is clear”" aria-label="Note"></div>
+  <button class="btn primary" type="submit" id="notebtn">Note</button>
+</form>
+
+<div id="pad" aria-label="Move">
+  <button class="u" data-k="ArrowUp" aria-label="Forward">▲</button>
+  <button class="l" data-k="ArrowLeft" aria-label="Turn left">◀</button>
+  <button class="d" data-k="ArrowDown" aria-label="Back">▼</button>
+  <button class="r" data-k="ArrowRight" aria-label="Turn right">▶</button>
+</div>
+<div id="toast" role="status"></div>
+<div id="msg" role="status" aria-live="polite"></div>
+
+<div id="outcard" class="overlay" hidden>
+  <div class="startcard">
+    <p class="eyebrow" id="outeyebrow">Run complete</p>
+    <h1 id="outtitle">You got out</h1>
+    <p class="task" id="outtext"></p>
+    <button class="btn primary big" id="seeresults" type="button">See the results</button>
+  </div>
+</div>
+
+<section id="report" hidden aria-label="Egress results"></section>
+
+<div id="start" class="overlay" hidden>
+  <form id="startform" class="startcard" autocomplete="off">
+    <p class="eyebrow" id="startmeta">Factory Egress</p>
+    <h1>Before you start</h1>
+    <p class="task" id="task"></p>
+    <div><label for="pcode">Participant code <span>optional, no names</span></label>
+      <input type="text" id="pcode" maxlength="24" placeholder="e.g. P07"></div>
+    <fieldset>
+      <legend>Eye height</legend>
+      <label class="chk"><input type="radio" name="eye" value="1.6" checked> Standing, 1.6 m</label>
+      <label class="chk"><input type="radio" name="eye" value="1.2"> Seated or wheelchair, 1.2 m</label>
+    </fieldset>
+    <fieldset class="scen">
+      <legend>Scenario</legend>
+      <label class="chk"><input type="checkbox" id="o-collapse" checked> Stock falls from the racking and blocks an aisle</label>
+      <label class="chk"><input type="checkbox" id="o-power" checked> Power cut: emergency lighting only</label>
+      <label class="chk"><input type="checkbox" id="o-smoke"> Smoke builds up</label>
+      <label class="chk"><input type="checkbox" id="o-shake" checked> Camera shake <span>(turn off if you get motion sick)</span></label>
+      <label class="chk"><input type="checkbox" id="o-sound" checked> Alarm sound</label>
+    </fieldset>
+    <label class="chk"><input type="checkbox" id="consent"> I understand this is a simulated emergency with an alarm, flashing lights, shaking and falling objects, and that it records where I look, where I walk and what I type. It is saved on this device only. I can stop at any time with End run.</label>
+    <div class="keys"><b>Drag</b><span>look around</span><b>W A S D / arrows</b><span>walk and turn (Shift to go faster)</span><b>Enter</b><span>add a note about what you see</span><b>End run</b><span>stop and see the results</span></div>
+    <button class="btn primary big" type="submit">Start</button>
+    <p class="switch">You will start at one of the points farthest from every exit. <a href="index.html">Glazing study →</a></p>
+  </form>
+</div>
+<div id="fatal" hidden></div>
+
+<script type="module" src="src/egress/main.js"></script>
+</body>
+</html>

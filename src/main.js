@@ -16,6 +16,7 @@ import { setupPlatform } from './platform.js';
 
 const params = new URLSearchParams(location.search);
 const roomId = (params.get('room') || 'glazing-study').replace(/[^a-z0-9-]/gi, '');
+if (roomId === 'factory-egress') location.replace('egress.html' + (params.get('debug') ? '?debug=1' : ''));
 // ?debug=1 keeps the loop ticking in a hidden tab (for automated test walks) and exposes state.
 const DEBUG = params.get('debug') === '1';
 const nextFrame = DEBUG
@@ -132,6 +133,8 @@ async function boot() {
   nextFrame(frame);
 
   setupControls({ onNoteKey: () => $('#note').focus() });
+  // switching study mid-walk would lose the walk, so ask first
+  $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => { if (S.started && !confirm('Leave this walk for the egress study? It has not been decoded or saved.')) e.preventDefault(); }));
   setupPlatform({ onFinal: t => { if (S.started && !S.review) addNote(t, 'voice'); } });
   setupReport({ onNewWalk: showStart, onReview: enterReview });
   $('#m-obs').onclick = () => setSubject(false);

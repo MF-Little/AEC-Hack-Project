@@ -20,6 +20,7 @@ Open http://localhost:8765 in Chrome. There is no build step. three.js r128 load
 | `/?room=garden-apartment` | The Garden Apartment with wall, glass and furniture switching |
 | `/?room=open-loft` | The simpler open loft (no interior walls) |
 | `/?room=<name>` | Loads `rooms/<name>.json` |
+| `/egress.html` | Factory Egress: find your way out of a factory in an emergency |
 | `/?debug=1` | Keeps the loop running in a background tab and exposes state as `window.__gd`, for automated test walks |
 | `/legacy/gaze-decoder-v2.html` | The earlier single-file prototype |
 
@@ -49,6 +50,17 @@ The report leads with:
 - the comment map
 
 Design traits, the BIM schedule and plan heat sit under **Advanced data**.
+
+## Factory Egress (`/egress.html`)
+
+A second study on the same engine: the question is not "what do people like" but "can they get out". It is a behavioural wayfinding test, not a code compliance check.
+
+- **The space.** Level 1 production hall of a factory at night, 40 × 26 m, with pallet racking (aisles and a dead end), CNC machines, a press, a conveyor, a robot cell, a forklift and a shift office. Three exits: two protected stair cores (with real stair flights behind the fire doors) and an external escape door onto a steel stair. Decoys: a goods lift, two loading shutters, the locked office and a former exit sealed during a fit-out.
+- **14 signs with metadata.** ISO 7010-style running-figure signs, a superseded text-only sign, a lift prohibition and a "no exit" sign. Each records illumination (internally lit, photoluminescent, unlit), size, mounting, rated viewing distance (Z factor × sign height) and standard. Hanging signs are double-sided with the arrow drawn correctly for each face.
+- **Spawn.** A 0.25 m floor grid (`src/egress/nav.js`) gives the walking distance from every point to the nearest exit. Each run starts at one of the farthest open spots, facing a random direction.
+- **Pressure, each a switch on the start screen.** An alarm (sound and red beacons), camera shake with a comfort switch, stock falling from the racking onto the walker's own route a few metres ahead (always leaving another way out), a power cut that leaves emergency lighting only, and smoke.
+- **What it records.** The route against the shortest one, time before the first move, hesitations and what was in view, wrong turns and detours, dead ends, doors tried, and for every sign: in view, readable, looked at, first-look distance and whether the person then went the way it points. An arrow audit checks each sign against the grid's shortest route (the old text sign points to the sealed door).
+- **The report.** Route map, findings, sign table with verdicts, decision points, pinned remarks, results across all saved runs, and a 3D review with the heat and both routes on the floor.
 
 ## The Garden Apartment
 
@@ -150,6 +162,9 @@ src/
   tracking/             movement and collision, per-frame tracker, notes
   decoder/decode.js     the four questions, areas, glass choice, reading, recommendations, export
   ui/                   observer panel, plan, heat visualisations, event feed, report
+  egress/               Factory Egress: builder, signs, walking-distance grid, hazards, tracker, report
+egress.html             Factory Egress page
+rooms/factory-egress.json  the factory: exits, decoys, racking, machines, signs and their metadata
 legacy/                 the earlier single-file prototype
 docs/                   reports and pitch notes
 ```
