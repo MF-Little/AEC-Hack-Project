@@ -1,0 +1,76 @@
+{
+ "v": 5,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-14T22:30:00Z"
+ },
+ "lists": "css",
+ "format": {
+  "v": 1,
+  "shared": [
+   "project/deck.css"
+  ]
+ },
+ "title": "Visual Vibes",
+ "cover": "cover",
+ "order": [
+  "cover",
+  "problem",
+  "how",
+  "variable",
+  "metadata",
+  "live",
+  "result",
+  "spec",
+  "explorer",
+  "dna",
+  "facade",
+  "remarks",
+  "schedule",
+  "egress",
+  "egress-setup",
+  "egress-pressure",
+  "egress-signs",
+  "egress-run",
+  "egress-signtable",
+  "egress-findings",
+  "next"
+ ],
+ "sections": {
+  "s1": {
+   "description": "What Visual Vibes is",
+   "start": "cover"
+  },
+  "s2": {
+   "description": "The problem and how it works",
+   "start": "problem"
+  },
+  "s3": {
+   "description": "The test and the metadata behind it",
+   "start": "variable"
+  },
+  "s4": {
+   "description": "What one decoded walk produced",
+   "start": "result"
+  },
+  "s5": {
+   "description": "Second study: factory egress and life safety",
+   "start": "egress"
+  },
+  "s6": {
+   "description": "Where it goes next",
+   "start": "next"
+  }
+ },
+ "faces": {
+  "archivo": {
+   "family": "Archivo",
+   "href": "https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap"
+  },
+  "ibm-plex-mono": {
+   "family": "IBM Plex Mono",
+   "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+  }
+ },
+ "designSystems": []
+}
