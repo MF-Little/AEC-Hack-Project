@@ -27,7 +27,7 @@ export function newRun({ participant = '', opts = {}, spawn }) {
     startedAt: new Date().toISOString(),
     t: 0, walked: 0, optimal0: 0, path: [], events: [],
     orientT: null, hes: [], wrong: [], deadEnds: {}, decoys: {}, signs: {}, obj: {}, notes: [],
-    look: { steady: 0, sweeping: 0 }, exit: null, collapse: null, powerCutAt: null, smokeAt: null,
+    look: { steady: 0, sweeping: 0 }, exit: null, collapse: null, collapses: [], powerEvents: [], powerCutAt: null, smokeAt: null,
     best: { d: Infinity, x: 0, z: 0 }, openHes: null, openWrong: null, still: 0
   };
   for (const s of E.room.signs) E.run.signs[s.id] = { vis: 0, legible: 0, attn: 0, firstVis: null, firstLook: null, followed: null, check: null, visDark: 0 };

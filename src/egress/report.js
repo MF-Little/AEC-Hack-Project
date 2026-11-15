@@ -73,6 +73,7 @@ function nearestThing(x, z) {
   return `${cands[0][0] < 0.8 ? 'beside' : 'near'} ${cands[0][1]}`;
 }
 const name = id => (B.objects[id] ? B.objects[id].name : id);
+const collapsesOf = r => r.collapses || (r.collapse ? [r.collapse] : []);
 const lc1 = s => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;   // 'Stair B' stays, 'Hanging sign' becomes 'hanging sign'
 
 // ---------- route map ----------
@@ -107,11 +108,11 @@ export function drawRoute(cv, r, o = {}) {
   }
   const runs = o.group || (r ? [r] : []);
   // collapse blocks
-  runs.forEach(rr => { if (!rr.collapse) return; const [a, b, cz, d] = rr.collapse.rect, [x, y] = P(a, cz); c.save(); c.beginPath(); c.rect(x, y, (b - a) * s, (d - cz) * s); c.clip(); c.strokeStyle = '#9A5B2E'; c.lineWidth = 1.5; for (let k = -40; k < 40; k++) { c.beginPath(); c.moveTo(x + k * 4, y); c.lineTo(x + k * 4 + 40, y + 40); c.stroke(); } c.restore(); });
+  runs.forEach(rr => collapsesOf(rr).forEach(cl => { const [a, b, cz, d] = cl.rect, [x, y] = P(a, cz); c.save(); c.beginPath(); c.rect(x, y, (b - a) * s, (d - cz) * s); c.clip(); c.strokeStyle = '#9A5B2E'; c.lineWidth = 1.5; for (let k = -40; k < 40; k++) { c.beginPath(); c.moveTo(x + k * 4, y); c.lineTo(x + k * 4 + 40, y + 40); c.stroke(); } c.restore(); }));
   const line = (pts, col, lw, dash) => { if (pts.length < 2) return; c.strokeStyle = col; c.lineWidth = lw; c.setLineDash(dash || []); c.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p[0], p[1]); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); c.setLineDash([]); };
   if (!o.group && r) {
     line(r.route0, '#0B9A55', o.live ? 1.5 : 2, [6, 4]);
-    if (r.collapse) line(r.collapse.route, '#0B9A55', o.live ? 1.5 : 2, [2, 3]);
+    collapsesOf(r).forEach(cl => line(cl.route, '#0B9A55', o.live ? 1.5 : 2, [2, 3]));
   }
   runs.forEach(rr => line(rr.path.map(p => [p[1], p[2]]), o.group ? 'rgba(54,81,201,.45)' : '#3651C9', o.group ? 1.5 : (o.live ? 2 : 2.6)));
   // signs
@@ -149,7 +150,7 @@ export function openReport() {
   const stat = (k, v, p, cls = '') => `<div class="est ${cls}"><span class="k">${k}</span><span class="v">${v}</span><p>${p}</p></div>`;
   const stats = [
     stat('Time to get out', r.result === 'exit' ? clockFmt(r.duration) : '–', r.result === 'exit' ? `${exit.id}, ${exit.kind === 'stair' ? 'protected stair' : 'external door'}` : 'did not reach an exit', r.result === 'exit' ? 'sig' : 'warm'),
-    stat('Route efficiency', `${Math.round(r.efficiency * 100)}%`, `walked ${r.walked} m; shortest possible ${r.best_possible} m${r.collapse ? ' (after the blockage)' : ''}`, r.efficiency > 0.8 ? 'sig' : 'warm'),
+    stat('Route efficiency', `${Math.round(r.efficiency * 100)}%`, `walked ${r.walked} m; shortest possible ${r.best_possible} m${collapsesOf(r).length ? (collapsesOf(r).length > 1 ? ' (after the last blockage)' : ' (after the blockage)') : ''}`, r.efficiency > 0.8 ? 'sig' : 'warm'),
     stat('Before first move', `${r.orientT !== null ? r.orientT.toFixed(1) : '–'} s`, 'standing at the spawn, getting bearings'),
     stat('Hesitations', `${r.hes.length} · ${hesT.toFixed(0)} s`, 'stops of 1 s or more after the first move', r.hes.length > 2 ? 'warm' : ''),
     stat('Wrong turns', `${r.wrong.length}`, r.wrong.length ? `${detour.toFixed(0)} m walked on detours` : 'never headed away from the exit', r.wrong.length ? 'warm' : ''),
@@ -177,7 +178,7 @@ export function openReport() {
     <div class="rhead"><div><h1>${esc(title)}</h1><p>Factory Egress · ${r.participant ? esc(r.participant) + ' · ' : ''}spawned ${r.spawn.d} m from the nearest exit on foot · ${chips.length ? chips.join(', ') : 'alarm only'} · ${new Date(r.startedAt).toLocaleString()}</p></div>
       <div class="controls"><button class="btn" id="r-review">Review in 3D</button><button class="btn" id="r-export">Export JSON</button><button class="btn primary" id="r-new">New run</button></div></div>
     <div class="estats">${stats}</div>
-    <div class="rsec"><h2>The route <small>blue: walked · green dashed: shortest from the spawn${r.collapse ? ' and, dotted, after the blockage' : ''} · amber: hesitations · ×: wrong turns · triangles: signs</small></h2>
+    <div class="rsec"><h2>The route <small>blue: walked · green dashed: shortest from the spawn${collapsesOf(r).length ? ' and, dotted, after each blockage' : ''} · amber: hesitations · ×: wrong turns · triangles: signs</small></h2>
       <div class="routebox"><canvas id="rplan"></canvas>
       <div class="legend"><span><i></i>route walked</span><span><i class="g"></i>shortest route</span><span><i class="h"></i>hesitation (size = time)</span><span><i class="x"></i>wrong turn</span><span><i class="sg"></i>sign looked at</span><span><i class="sm"></i>readable, not looked at</span><span><i class="sn"></i>never readable</span>${r.collapse ? '<span><i class="cl"></i>fallen stock</span>' : ''}<span style="color:#B3261E">! arrow disagrees with the shortest route</span></div></div></div>
     <div class="rsec"><h2>What it means</h2><ul class="find">${findings(r, au)}</ul></div>
@@ -193,7 +194,7 @@ export function openReport() {
       <p><b>Followed.</b> In the ${EC.followWindow} s after first looking, the person moved at least 1.2 m within 60° of the direction the sign points.</p>
       <p><b>Hesitation.</b> Moving slower than ${EC.hesitateSpeed} m/s for ${EC.hesitateMin} s or more after the first move. <b>Wrong turn.</b> Getting ${EC.wrongTurn} m farther from the nearest exit than your best so far; the detour is the distance walked until you are back.</p>
       <p><b>Arrow audit.</b> For each directional sign, the grid's shortest route from the sign's position is compared with the arrow; more than 60° apart is flagged.</p>
-      <p><b>Falling stock.</b> Placed on the walker's own shortest route, 3.5 to 14 m ahead and in view where possible, only where another way out remains. Efficiency then compares the distance walked with the best possible: walked until the collapse plus the new shortest route.</p>
+      <p><b>Falling stock.</b> Placed on the walker's own shortest route, 3.5 to 14 m ahead and in view where possible, only where another way out remains. Up to three per run, at least 13 s apart, never on the same site twice. Efficiency then compares the distance walked with the best possible: walked until the last collapse plus the new shortest route from there.</p>
       <p>This is a behavioural test of wayfinding, not a code compliance check. It complements travel-distance checks and evacuation modelling.</p></div></details>
   </div>`;
   rep.hidden = false; rep.scrollTop = 0;
@@ -225,10 +226,14 @@ function findings(r, au) {
   }
   if (r.decoys.LIFT) out.push(['risk', `Tried the goods lift at ${clockFmt(r.decoys.LIFT.t)}. The “do not use lift” sign SG-10 was ${S['SG-10'].attn >= EC.firstLook ? 'looked at' : S['SG-10'].vis ? 'in view but not looked at' : 'never in view'}.`, 'decoy door']);
   for (const id of Object.keys(r.decoys)) if (id !== 'LIFT') out.push(['risk', `Tried ${lc1(name(id))} at ${clockFmt(r.decoys[id].t)}.`, 'decoy door']);
-  if (r.collapse) {
-    const after = r.path.find(p => p[0] > r.collapse.t && p[3] !== null && p[3] < r.collapse.after - 3);
-    out.push(['', `Stock fell ${r.collapse.ahead} m ahead at ${clockFmt(r.collapse.t)} and blocked the aisle; the way out grew from ${r.collapse.before} m to ${r.collapse.after} m. ${after ? `Back on a working route ${(after[0] - r.collapse.t).toFixed(0)} s later.` : 'The person did not find a working route before the run ended.'}`, `site ${r.collapse.site}`]);
-  }
+  const cs = collapsesOf(r);
+  cs.forEach((c, i) => {
+    const until = cs[i + 1] ? cs[i + 1].t : Infinity;
+    const after = r.path.find(p => p[0] > c.t && p[0] < until && p[3] !== null && p[3] < c.after - 3);
+    out.push(['', `${cs.length > 1 ? `Collapse ${i + 1} of ${cs.length}: ${c.from === 'roof' ? 'roof debris' : 'stock from the racking'}` : (c.from === 'roof' ? 'Roof debris' : 'Stock from the racking')} fell ${c.ahead} m ahead at ${clockFmt(c.t)} and blocked the way; the way out grew from ${c.before} m to ${c.after} m. ${after ? `Back on a working route ${(after[0] - c.t).toFixed(0)} s later.` : cs[i + 1] ? 'Still searching when the next collapse came.' : 'The person did not find a working route before the run ended.'}`, `site ${c.site}`]);
+  });
+  const pe = r.powerEvents || [];
+  if (pe.length > 1) out.push(['', `The lights changed ${pe.length} times: ${pe.map(([t, on]) => `${on ? 'on' : 'off'} at ${clockFmt(t)}`).join(', ')}. Lit signs stayed readable throughout; unlit and photoluminescent ones came and went.`, 'power events']);
   if (r.powerCutAt !== null) {
     const darkLooks = room.signs.filter(s => S[s.id].firstLook && S[s.id].firstLook.t >= r.powerCutAt);
     out.push(['', `After the power cut at ${clockFmt(r.powerCutAt)}, ${darkLooks.length ? `signs first looked at: ${darkLooks.map(s => `${s.id} (${s.illum === 'internal' ? 'lit' : s.illum === 'photolum' ? 'photoluminescent' : 'unlit'})`).join(', ')}` : 'no new sign was looked at'}.`, 'emergency lighting only']);

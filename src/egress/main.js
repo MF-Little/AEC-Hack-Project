@@ -82,26 +82,45 @@ function startRun({ participant = '', eye = 1.6, opts }) {
   HZ.shakeScale = opts.shake ? 1 : 0;
   sound = opts.sound; $('#soundbtn').textContent = sound ? 'Sound on' : 'Sound off'; $('#soundbtn').setAttribute('aria-pressed', sound);
   if (sound) startAlarm(); HZ.alarmOn = true; document.body.classList.add('alarm');
-  E.timeline = { bang: false, collapseTry: 0, aftershock: false, power: false, smoke: false };
+  E.timeline = { bang: false, collapseTry: 0, aftershock: false, power: false, smoke: false, eligibleAt: null, powerPlan: [] };
+  E.blockers = [];
   E.started = true;
   $('#feed').innerHTML = ''; renderSignList();
   logEvent('start', `Spawned ${sp.d} m from the nearest exit on foot${participant ? ' · ' + participant : ''}`);
 }
 
 // Scripted pressure. The falling stock is placed on the walker's own shortest route, a few metres
-// ahead, so it always forces a decision rather than landing somewhere irrelevant.
+// ahead, so it always forces a decision rather than landing somewhere irrelevant. Up to three
+// collapses per run, each on the route the person has just been pushed onto, always leaving a way out.
+// The power fails, a generator brings the lights back for a few seconds, then they fail again.
+const MAX_COLLAPSES = 3, COLLAPSE_GAP = 13;
 function scenario(dt) {
-  const r = E.run, T = E.timeline, t = r.t, o = E.opts;
+  const r = E.run, T = E.timeline, t = r.t, o = E.opts, cs = r.collapses, last = cs[cs.length - 1];
   if (!T.bang && t > 0.6) { T.bang = true; shake(0.7, 1.8); if (sound) crash(0.5); logEvent('shake', 'A heavy impact shakes the building'); }
-  if (o.collapse && !r.collapse && r.orientT !== null && t > 2.5 && t < 75 && (T.collapseTry -= dt) <= 0) { T.collapseTry = 0.5; tryCollapse(r); }
-  const powerAt = r.collapse ? r.collapse.t + 1.6 : (o.collapse ? 30 : 18);
-  if (o.power && !T.power && t > powerAt) { T.power = true; setPower(false); r.powerCutAt = +t.toFixed(1); logEvent('power', 'Power cut: emergency lighting only'); if (sound) thud(); }
-  const smokeAt = r.collapse ? r.collapse.t + 3 : (o.collapse ? 32 : 15);
-  if (o.smoke && !T.smoke && t > smokeAt) { T.smoke = true; HZ.fogTarget = 0.09; r.smokeAt = +t.toFixed(1); logEvent('smoke', 'Smoke is building up'); }
-  if (!T.aftershock && t > (r.collapse ? r.collapse.t + 14 : 40)) { T.aftershock = true; shake(0.35, 1.4); if (sound) thud(); }
+  const ready = o.collapse && cs.length < MAX_COLLAPSES && r.orientT !== null && t > 2.5 && t < 120 && (!last || t > last.t + COLLAPSE_GAP);
+  if (ready && T.eligibleAt === null) T.eligibleAt = t;
+  if (ready && (T.collapseTry -= dt) <= 0) { T.collapseTry = 0.5; if (tryCollapse(r, t - T.eligibleAt > 12)) T.eligibleAt = null; }
+  // power: first cut just after the first collapse, then back on, off, on, off
+  const powerAt = cs.length ? cs[0].t + 1.6 : (o.collapse ? 30 : 18);
+  if (o.power && !T.power && t > powerAt) {
+    T.power = true; powerSwitch(r, false, 'Power cut: emergency lighting only');
+    T.powerPlan = [[t + 9, true, 'The generator brings the lights back'], [t + 15, false, 'The lights fail again'], [t + 31, true, 'Lights back on, flickering'], [t + 36, false, 'The lights fail again']];
+  }
+  while (T.powerPlan.length && t > T.powerPlan[0][0]) { const [, on, msg] = T.powerPlan.shift(); powerSwitch(r, on, msg); }
+  // smoke thickens in stages, a step with every collapse
+  const smokeAt = cs.length ? cs[0].t + 3 : (o.collapse ? 32 : 15);
+  if (o.smoke && !T.smoke && t > smokeAt) { T.smoke = true; r.smokeAt = +t.toFixed(1); logEvent('smoke', 'Smoke is building up'); }
+  if (T.smoke) HZ.fogTarget = Math.min(0.085, 0.03 + 0.022 * Math.max(0, cs.length - 1) + 0.0004 * (t - r.smokeAt));
+  if (!T.aftershock && t > (cs.length ? cs[0].t + 14 : 40)) { T.aftershock = true; shake(0.35, 1.4); if (sound) thud(); }
+}
+function powerSwitch(r, on, msg) {
+  if ((HZ.power === 1) === on) return;
+  setPower(on); if (!on && r.powerCutAt === null) r.powerCutAt = +r.t.toFixed(1);
+  (r.powerEvents || (r.powerEvents = [])).push([+r.t.toFixed(1), on ? 1 : 0]);
+  logEvent('power', msg); if (sound) thud();
 }
 const ray = new THREE.Raycaster();
-function tryCollapse(r) {
+function tryCollapse(r, anyView) {
   // candidate sites on the walker's shortest route, 3.5 to 14 m ahead; prefer one they can see
   // (within 55 degrees of where they face, nothing solid in between) and about 8 m away
   const path = pathFrom(E.grid, E.F, E.pos.x, E.pos.z), found = new Map(); let acc = 0;
@@ -110,7 +129,7 @@ function tryCollapse(r) {
     for (let s = 0; s <= L; s += 0.25) {
       const x = ax + (bx - ax) * s / L, z = az + (bz - az) * s / L, d = acc + s;
       if (d < 3.5 || d > 14) continue;
-      for (const site of room().collapseSites) { const [a, b, c, e] = site.rect; if (x > a - 0.2 && x < b + 0.2 && z > c - 0.2 && z < e + 0.2 && !found.has(site)) found.set(site, d); }
+      for (const site of room().collapseSites) { if (r.collapses.some(c => c.site === site.id)) continue; const [a, b, c, e] = site.rect; if (x > a - 0.2 && x < b + 0.2 && z > c - 0.2 && z < e + 0.2 && !found.has(site)) found.set(site, d); }
     }
     acc += L;
   }
@@ -122,18 +141,22 @@ function tryCollapse(r) {
     const h = ray.intersectObjects(B.targets, false)[0]; return !h || h.distance > L - 1.6;
   };
   let best = null;
-  for (const [site, d] of found) { if (!seen(site) && r.t < 35) continue; if (!best || Math.abs(d - 8) < Math.abs(best.d - 8)) best = { site, d }; }
-  if (!best) return;
-  const g = makeGrid(room(), [best.site.rect]), F = field(g), Dn = distAt(g, F, E.pos.x, E.pos.z);
-  if (!isFinite(Dn)) return;
+  for (const [site, d] of found) { if (!seen(site) && !anyView) continue; if (!best || Math.abs(d - 8) < Math.abs(best.d - 8)) best = { site, d }; }
+  if (!best) return false;
+  const g = makeGrid(room(), [...E.blockers, best.site.rect]), F = field(g), Dn = distAt(g, F, E.pos.x, E.pos.z);
+  if (!isFinite(Dn)) return false;
   const Db = distAt(E.grid, E.F, E.pos.x, E.pos.z);
   const info = collapse(best.site, room());
-  B.colliders.push(best.site.rect); E.grid = g; E.F = F;
-  r.collapse = { t: +r.t.toFixed(1), ...info, x: +E.pos.x.toFixed(2), z: +E.pos.z.toFixed(2), ahead: +best.d.toFixed(1), walkedAt: +r.walked.toFixed(1), before: +Db.toFixed(1), after: +Dn.toFixed(1),
+  B.colliders.push(best.site.rect); E.blockers.push(best.site.rect); E.grid = g; E.F = F;
+  const ev = { n: r.collapses.length + 1, t: +r.t.toFixed(1), ...info, x: +E.pos.x.toFixed(2), z: +E.pos.z.toFixed(2), ahead: +best.d.toFixed(1), walkedAt: +r.walked.toFixed(1), before: +Db.toFixed(1), after: +Dn.toFixed(1),
     route: pathFrom(g, F, E.pos.x, E.pos.z).map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) };
+  r.collapses.push(ev); if (!r.collapse) r.collapse = ev;
   rebase(r);
+  if (r.collapses.length > 1 && HZ.power === 1 && E.timeline.power) powerSwitch(r, false, 'The impact knocks the lights out again');
   shake(1.0, 2.4); if (sound) crash(1);
-  logEvent('collapse', `Stock fell from the racking ${best.d.toFixed(0)} m ahead and blocked the aisle (${info.site}); the shortest way out is now ${Dn.toFixed(1)} m instead of ${Db.toFixed(1)} m`);
+  const what = info.from === 'roof' ? 'ductwork and a light fitting fell from the roof' : 'stock fell from the racking';
+  logEvent('collapse', `${ev.n > 1 ? 'Another collapse: ' + what : what[0].toUpperCase() + what.slice(1)} ${best.d.toFixed(0)} m ahead and blocked the way (${info.site}); the shortest way out is now ${Dn.toFixed(1)} m instead of ${Db.toFixed(1)} m`);
+  return true;
 }
 
 function finish(kind, exit) {
@@ -142,7 +165,8 @@ function finish(kind, exit) {
   closeHes(r); closeWrong(r);
   stopAlarm(); HZ.alarmOn = false; document.body.classList.remove('alarm');
   r.result = kind; r.duration = +r.t.toFixed(1); r.walked = +r.walked.toFixed(1);
-  r.best_possible = r.collapse ? +(r.collapse.walkedAt + r.collapse.after).toFixed(1) : r.optimal0;
+  const lc = r.collapses[r.collapses.length - 1];
+  r.best_possible = lc ? +(lc.walkedAt + lc.after).toFixed(1) : r.optimal0;
   r.efficiency = r.walked > 0 ? Math.min(1, r.best_possible / r.walked) : 0;
   saveRun(r);
   const mm = clockFmt(r.t);
@@ -175,7 +199,7 @@ function enterReview() {
   E.review = true; document.body.classList.add('reviewing');
   pushHeat(); setHeatVisible(true); clearReviewLines();
   ribbon(r.route0, 0.14, 0x0B9A55, 0.03, true);
-  if (r.collapse) ribbon(r.collapse.route, 0.14, 0x0B9A55, 0.035, true);
+  (r.collapses || (r.collapse ? [r.collapse] : [])).forEach(c => ribbon(c.route, 0.14, 0x0B9A55, 0.035, true));
   ribbon(r.path.map(p => [p[1], p[2]]), 0.16, 0x3651C9, 0.04);
   for (const h of r.hes) { const m = new THREE.Mesh(new THREE.CircleGeometry(0.25 + Math.min(1.2, h.dur * 0.12), 28), new THREE.MeshBasicMaterial({ color: 0xE3A23B, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false })); m.rotation.x = -Math.PI / 2; m.position.set(h.x, 0.05, h.z); scene.add(m); reviewLines.push(m); }
   setPower(true, true); HZ.fogTarget = 0; if (HZ.fog) HZ.fog.density = 0;
@@ -206,7 +230,7 @@ function renderPanel() {
     ['Nearest exit', isFinite(E.D) ? `${E.D.toFixed(1)} m on foot` : 'cut off'],
     ['Walked', `${r.walked.toFixed(1)} m · shortest at start ${r.optimal0} m`],
     ['Now', `${st}${r.openWrong ? ' · <b style="color:var(--warm)">heading away</b>' : ''} · ${E.steady ? 'steady view' : 'turning'}`],
-    ['Hazards', [r.collapse && 'aisle blocked', r.powerCutAt !== null && 'power cut', r.smokeAt !== null && 'smoke'].filter(Boolean).join(', ') || 'alarm only']
+    ['Hazards', [r.collapses.length && (r.collapses.length > 1 ? r.collapses.length + ' aisles blocked' : 'aisle blocked'), r.powerCutAt !== null && (HZ.power ? 'lights back on' : 'power cut'), r.smokeAt !== null && 'smoke'].filter(Boolean).join(', ') || 'alarm only']
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const o = lookingAt();
   $('#now').innerHTML = o ? `<b>${esc(o.name)}</b><span class="k">${esc(o.id)} · ${E.gazeDist.toFixed(1)} m</span>` : '<span class="k">nothing tagged</span>';

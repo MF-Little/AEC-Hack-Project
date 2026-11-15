@@ -51,8 +51,8 @@ export function shakeOffset(dt) {
 // Takes the loads off the rack faces either side of an aisle site and drops them across it.
 export function collapse(site, room) {
   const [x0, x1, z0, z1] = site.rect, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, g = 9.81;
-  const picked = [];
-  for (const id in B.racks) B.racks[id].loads.forEach((b, i) => {
+  const picked = [], roof = site.from === 'roof';
+  if (!roof) for (const id in B.racks) B.racks[id].loads.forEach((b, i) => {
     if (b.level < 1) return;
     const near = site.axis === 'x'
       ? b.x > x0 - 0.9 && b.x < x1 + 0.9 && (Math.abs(b.z - z0) < 1.3 || Math.abs(b.z - z1) < 1.3)
@@ -61,9 +61,18 @@ export function collapse(site, room) {
   });
   picked.sort((p, q) => q.b.y - p.b.y);
   const use = picked.slice(0, 14);
+  // open floor: ductwork, cable tray and a light fitting come down from the roof instead
+  if (roof) {
+    const steel = [0x8C959C, 0x6E7B86, 0xA4ACB2, 0x2F3236];
+    for (let k = 0; k < 11; k++) {
+      const long = k % 3 !== 2, along = Math.random() < 0.5;
+      const w = long ? (along ? 1.8 + Math.random() * 1.2 : 0.45) : 0.9, d = long ? (along ? 0.45 : 1.8 + Math.random() * 1.2) : 0.7, h = long ? 0.42 : 0.5;
+      use.push({ id: null, b: { x: x0 + Math.random() * (x1 - x0), y: 7.2 + Math.random() * 0.9, z: z0 + Math.random() * (z1 - z0), w, h, d, c: new THREE.Color(long ? steel[k % steel.length] : 0xB8946A).convertSRGBToLinear() } });
+    }
+  }
   // a single-depth run holds few loads near the site: top up with stock from the upper levels
   const cols = [0xB8946A, 0xC4A177, 0xD9D4C8, 0x6F8FB0, 0xA9845A];
-  while (use.length < 12) {
+  while (!roof && use.length < 12) {
     const fx = x0 + Math.random() * (x1 - x0), fz = site.axis === 'x' ? (Math.random() < 0.5 ? z0 - 0.5 : z1 + 0.5) : z0 + Math.random() * (z1 - z0);
     use.push({ id: null, b: { x: fx, y: 2 + Math.random() * 3, z: fz, w: 0.9, h: 0.6 + Math.random() * 0.4, d: 0.9, c: new THREE.Color(cols[use.length % cols.length]).convertSRGBToLinear() } });
   }
@@ -83,12 +92,11 @@ export function collapse(site, room) {
       spin: new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 6), rest: new THREE.Euler((Math.random() - 0.5) * 0.5, Math.random() * Math.PI, (Math.random() - 0.5) * 0.5) });
   });
   // a buckled beam lying across the aisle
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(site.axis === 'x' ? 2.6 : 0.12, 0.12, site.axis === 'x' ? 0.12 : 2.6), MT.rackOrange);
+  const bl = roof ? 3.2 : 2.6, beam = new THREE.Mesh(new THREE.BoxGeometry(site.axis === 'x' ? bl : 0.14, roof ? 0.2 : 0.12, site.axis === 'x' ? 0.14 : bl), roof ? MT.steel : MT.rackOrange);
   beam.position.set(cx, 0.35, cz); beam.rotation.y = 0.5; beam.rotation.z = 0.25; beam.castShadow = true; beam.userData.tag = 'COLLAPSE';
   beam.visible = false; scene.add(beam); HZ.extra.push(beam); HZ.beam = { m: beam, t: 0.6 };
   dust(cx, cz);
-  HZ.blocker = [x0, x1, z0, z1];
-  return { site: site.id, rect: [x0, x1, z0, z1], boxes: use.length };
+  return { site: site.id, rect: [x0, x1, z0, z1], boxes: use.length, from: roof ? 'roof' : 'racking' };
 }
 function dust(x, z) {
   const n = 420, g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), v = [];
@@ -123,7 +131,7 @@ export function tickHazards(dt, t) {
 }
 
 export function resetHazards() {
-  HZ.shakes = []; HZ.bodies = []; HZ.beam = null; HZ.dust = null; HZ.blocker = null; HZ.alarmOn = false; HZ.fogTarget = 0;
+  HZ.shakes = []; HZ.bodies = []; HZ.beam = null; HZ.dust = null; HZ.alarmOn = false; HZ.fogTarget = 0;
   if (HZ.fog) HZ.fog.density = 0;
   HZ.extra.forEach(o => { scene.remove(o); o.geometry && o.geometry.dispose(); }); HZ.extra = [];
   B.targets = B.targets.filter(o => o.userData.tag !== 'COLLAPSE');
