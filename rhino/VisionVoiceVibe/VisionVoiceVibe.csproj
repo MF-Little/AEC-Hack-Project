@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>VisionVoiceVibe</AssemblyName>
+    <RootNamespace>VisionVoiceVibe</RootNamespace>
+    <TargetExt>.rhp</TargetExt>
+    <Version>0.1.5</Version>
+    <Product>Vision, Voice, Vibe</Product>
+    <Description>Tracks where a client looks and what they say while walking a Rhino model, then decodes their preferences.</Description>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <NoWarn>$(NoWarn);CA1416;CS0618</NoWarn>
+  </PropertyGroup>
+
+  <!-- Where Rhino 9 keeps RhinoCommon, Eto and Rhino.UI. Pass -p:RhinoLibDir=... if Rhino is installed elsewhere. -->
+  <PropertyGroup Condition="'$(RhinoLibDir)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">
+    <RhinoLibDir>/Applications/Rhino 9.app/Contents/Frameworks/RhCore.framework/Versions/A/Resources</RhinoLibDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RhinoLibDir)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">
+    <RhinoLibDir>C:\Program Files\Rhino 9\System</RhinoLibDir>
+  </PropertyGroup>
+
+  <!-- On a Mac, voice uses Apple's Speech framework through the macOS bindings that ship inside Rhino. -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <Reference Include="Microsoft.macOS"><HintPath>$(RhinoLibDir)/Microsoft.macOS.dll</HintPath><Private>False</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RhinoCommon"><HintPath>$(RhinoLibDir)/RhinoCommon.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Eto"><HintPath>$(RhinoLibDir)/Eto.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Rhino.UI"><HintPath>$(RhinoLibDir)/Rhino.UI.dll</HintPath><Private>False</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="src/HeatSprite.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/report.css" LogicalName="VisionVoiceVibe.report.css" />
+  </ItemGroup>
+
+</Project>

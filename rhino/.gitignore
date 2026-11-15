@@ -1,0 +1,9 @@
+# build output
+VisionVoiceVibe/bin/
+VisionVoiceVibe/obj/
+VisionVoiceVibe/dist/
+# walk reports that Rhino saves next to the model
+Vision Voice Vibe walks/
+# Rhino backups and lock files
+*.3dmbak
+*.rhl

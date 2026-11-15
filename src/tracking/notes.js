@@ -31,21 +31,31 @@ export function analyseNote(text) {
   return { sentiment: Math.max(-2, Math.min(2, sent)), cues: [...new Set(CUES.filter(c => c.re.test(low)).map(c => c.attr))] };
 }
 
-export function addNote(text, source) {
-  text = text.trim(); if (!text) return;
+// Where the person stands, which way they face, what they're looking at and the options on show, right now.
+// A spoken note takes this from the moment its first words are heard, so it stays linked to what was in view
+// (and the glass on show) when the remark began, even if the view or the glass changes before it ends.
+export function noteContext() {
   const zone = currentZone();
   const target = S.gaze.tag || null;
-  const a = analyseNote(text);
-  // Where the person stood, which way they faced, and the exact point they were looking at
   const p = camera.position;
-  const pos = { x: +p.x.toFixed(2), z: +p.z.toFixed(2), eye: S.eye, heading: Math.round(((-S.yaw * 180 / Math.PI) % 360 + 360) % 360) };   // compass: 0 = north (rectangular windows), 90 = east
-  const look = target && S.gaze.point ? { ...S.gaze.point, dist: +S.gaze.dist.toFixed(2) } : null;
-  const ikey = target ? instKey(target) : null;
-  const note = { n: S.session.notes.length + 1, t: +S.session.elapsed.toFixed(1), text, source, target, inst: ikey, pos, look, zone: zone ? zone.id : null, choice: { ...S.choice }, sentiment: a.sentiment, cues: a.cues };
+  return {
+    t: +S.session.elapsed.toFixed(1), zone, target,
+    pos: { x: +p.x.toFixed(2), z: +p.z.toFixed(2), eye: S.eye, heading: Math.round(((-S.yaw * 180 / Math.PI) % 360 + 360) % 360) },   // compass: 0 = north (rectangular windows), 90 = east
+    look: target && S.gaze.point ? { ...S.gaze.point, dist: +S.gaze.dist.toFixed(2) } : null,
+    choice: { ...S.choice }
+  };
+}
+
+export function addNote(text, source, ctx) {
+  text = text.trim(); if (!text) return;
+  const { t, zone, target, pos, look, choice } = ctx || noteContext();
+  const a = analyseNote(text);
+  const ikey = target ? instKey(target, choice) : null;
+  const note = { n: S.session.notes.length + 1, t, text, source, target, inst: ikey, pos, look, zone: zone ? zone.id : null, choice: { ...choice }, sentiment: a.sentiment, cues: a.cues };
   S.session.notes.push(note);
   if (target) {
     const o = S.objects[target]; o.s.notes.push(note);
-    const v = varOf(o); if (v) { const ex = S.session.exposure[v][S.choice[v]]; ex.notes++; ex.sentiment += a.sentiment; }
+    const v = varOf(o); if (v) { const ex = S.session.exposure[v][choice[v]]; ex.notes++; ex.sentiment += a.sentiment; }
     const I = S.session.inst[ikey] || (S.session.inst[ikey] = blankInst());
     I.notes++; I.sentiment += a.sentiment; if (a.sentiment > 0) I.pos += a.sentiment; if (a.sentiment < 0) I.neg -= a.sentiment;
   }

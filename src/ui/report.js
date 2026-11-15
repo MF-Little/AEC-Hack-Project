@@ -14,7 +14,7 @@ import { dnaHTML, matrixHTML, scatterSVG, scatterControls, drawCommentMap, comme
 
 let hooks = {};
 export function setupReport(h) { hooks = h; addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#report').hidden) closeReport(); }); }
-export function closeReport() { $('#report').hidden = true; }
+export function closeReport() { $('#report').hidden = true; document.body.classList.remove('report-open'); }
 
 const STATUS = { clear: ['Clear preference', 'high'], leans: ['Leaning', 'med'], split: ['Split', 'low'], none: ['Not enough data', 'low'] };
 
@@ -171,6 +171,7 @@ export function openReport() {
   </div>`;
   const rep = $('#report'); const keep = rep.hidden ? 0 : rep.scrollTop;
   rep.hidden = false; rep.scrollTop = keep;
+  document.body.classList.add('report-open');   // hides the room and its floating panels underneath (see styles.css)
   const drawAll = () => { drawElevation($('#hsouth'), 'south'); drawElevation($('#hnorth'), 'north'); if ($('#cmap')) drawCommentMap($('#cmap')); };
   requestAnimationFrame(drawAll);
   $('details.adv').addEventListener('toggle', e => { if (e.target.open) requestAnimationFrame(() => { drawPlanHeat($('#hplan')); drawPlan($('#rplan'), true); }); });

@@ -8,7 +8,7 @@ import { attachOverlays, clearHeat, pushHeat, setHeatVisible } from './scene/hea
 import { applyOption, setLayout, randomLayout, startAutoRotate, stopAutoRotate, tickAutoRotate } from './scene/options.js';
 import { setupControls, move, placeAtStart } from './tracking/controls.js';
 import { track, resetMotion } from './tracking/tracker.js';
-import { addNote, renderNotes } from './tracking/notes.js';
+import { addNote, renderNotes, noteContext } from './tracking/notes.js';
 import { renderPanel, updateLabels, buildLabels, buildPins, clearPins, updatePins } from './ui/panel.js';
 import { resetFeed, log } from './ui/feed.js';
 import { setupReport, openReport } from './ui/report.js';
@@ -135,7 +135,10 @@ async function boot() {
   setupControls({ onNoteKey: () => $('#note').focus() });
   // switching study mid-walk would lose the walk, so ask first
   $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => { if (S.started && !confirm('Leave this walk for the egress study? It has not been decoded or saved.')) e.preventDefault(); }));
-  setupPlatform({ onFinal: t => { if (S.started && !S.review) addNote(t, 'voice'); } });
+  setupPlatform({
+    onFinal: (t, ctx) => { if (S.started && !S.review) addNote(t, 'voice', ctx); },
+    context: () => (S.started && !S.review ? noteContext() : null)
+  });
   setupReport({ onNewWalk: showStart, onReview: enterReview });
   $('#m-obs').onclick = () => setSubject(false);
   $('#m-sub').onclick = () => setSubject(true);
@@ -161,6 +164,7 @@ async function boot() {
     if (n >= 1 && n <= keyOpts.length) { const [v, o] = keyOpts[n - 1]; if (S.choice[v] !== o) applyOption(v, o); }
     if ((e.key === 'l' || e.key === 'L') && !room.lockLayout) setLayout(randomLayout());
     if (e.key === 'f' || e.key === 'F') setOutside(!S.outside);
+    if ((e.key === 'v' || e.key === 'V') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat && !$('#mic').hidden) $('#mic').click();
   });
   $('#startform').addEventListener('submit', e => {
     e.preventDefault();
@@ -188,8 +192,8 @@ function frame(now) {
       if (uiTimer > 0.2) { uiTimer = 0; if (!S.subject) renderPanel(); }
     }
     updateLabels();
+    renderer.render(scene, camera);   // only while the room is visible: redrawing it under the report made scrolling flicker
   }
-  renderer.render(scene, camera);
   nextFrame(frame);
 }
 
