@@ -14,6 +14,8 @@ python3 -m http.server 8765
 
 Open http://localhost:8765 in Chrome. There is no build step. three.js r128 loads from jsDelivr.
 
+On a Mac you can double-click `start.command` instead: it serves this folder and opens the app. If the room stays on "Loading", the server dropped some of the app's module files; serve it with `python3 -m http.server 8765 --protocol HTTP/1.1` (Python 3.11 or later), which `start.command` does for you.
+
 | Address | What it does |
 | --- | --- |
 | `/` | The Glazing Study, the default room |
@@ -24,7 +26,7 @@ Open http://localhost:8765 in Chrome. There is no build step. three.js r128 load
 | `/?debug=1` | Keeps the loop running in a background tab and exposes state as `window.__gd`, for automated test walks |
 | `/legacy/gaze-decoder-v2.html` | The earlier single-file prototype |
 
-Voice dictation and "Ask Claude" only work when the page runs as a Claude artifact. Elsewhere those buttons stay hidden and typed notes still work.
+Voice notes work in Chrome, Edge or Safari through the browser's own speech recognition: press **Speak** (or **V**) once and it keeps listening until you press it again. Each phrase becomes a note, linked to what was in view, and the glass on show, when the phrase began. Chrome sends the audio to Google to transcribe it, so voice needs an internet connection, and the page has to come from localhost so the browser can ask for the microphone. Inside a Claude artifact it uses Claude's dictation instead. "Ask Claude" still only works as a Claude artifact; elsewhere its button stays hidden.
 
 ## The Glazing Study (default)
 

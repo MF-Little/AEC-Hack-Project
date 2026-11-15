@@ -68,6 +68,9 @@ body.locked .cross::before,body.locked .cross::after{background:var(--signal);op
 .sec{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px}
 .now{font-family:var(--f-mono);font-size:12px;display:flex;flex-direction:column;gap:2px}
 .now .k{color:var(--mute)}
+/* Looking at: a fixed height with its own scroll, so the panel below doesn't jump as rows come and go */
+#panel .sec.lookat{height:200px;flex:none;box-sizing:border-box}
+.lookat .lookbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:8px}
 .meta{display:grid;grid-template-columns:78px 1fr;gap:3px 8px;font-size:11.5px}
 .meta dt{color:var(--mute);font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
 .meta dd{margin:0}
@@ -145,6 +148,10 @@ body.subject #panel,body.subject #labels,body.subject #toast,body.subject .logbt
 
 /* report sheet */
 #report{position:fixed;inset:0;overflow:auto;background:var(--paper);z-index:50;padding-top:calc(env(safe-area-inset-top,0px) + 24px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 48px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+/* While the decoded walk is open, hide the room and its floating panels underneath it. A 3D canvas and blurred
+   glass panels behind a scrolling sheet made layers flash through each other in Chrome. */
+body.report-open #scene,body.report-open #labels,body.report-open #pins,body.report-open .cross,body.report-open .top,body.report-open #panel,body.report-open #notebar,body.report-open #optw,body.report-open #glassw,body.report-open #pad,body.report-open #toast,body.report-open #reviewbar{visibility:hidden}
+#report{overscroll-behavior:contain;contain:paint;will-change:scroll-position}
 .sheet{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
 .rhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px}
 .rhead h1{margin:0;font-stretch:125%;font-weight:800;font-size:clamp(26px,4.4vw,44px);letter-spacing:-.01em;line-height:1;text-transform:uppercase;text-wrap:balance}
