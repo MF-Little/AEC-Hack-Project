@@ -176,7 +176,7 @@ export function openReport() {
   const runs = listRuns();
   rep.innerHTML = `<div class="sheet">
     <div class="rhead"><div><h1>${esc(title)}</h1><p>Factory Egress · ${r.participant ? esc(r.participant) + ' · ' : ''}spawned ${r.spawn.d} m from the nearest exit on foot · ${chips.length ? chips.join(', ') : 'alarm only'} · ${new Date(r.startedAt).toLocaleString()}</p></div>
-      <div class="controls"><button class="btn" id="r-review">Review in 3D</button><button class="btn" id="r-export">Export JSON</button><button class="btn primary" id="r-new">New run</button></div></div>
+      <div class="controls"><a class="btn" href="index.html" style="text-decoration:none">Glazing study</a><button class="btn" id="r-review">Review in 3D</button><button class="btn" id="r-export">Export JSON</button><button class="btn primary" id="r-new">New run</button></div></div>
     <div class="estats">${stats}</div>
     <div class="rsec"><h2>The route <small>blue: walked · green dashed: shortest from the spawn${collapsesOf(r).length ? ' and, dotted, after each blockage' : ''} · amber: hesitations · ×: wrong turns · triangles: signs</small></h2>
       <div class="routebox"><canvas id="rplan"></canvas>

@@ -114,7 +114,7 @@ export function openReport() {
   $('#report').innerHTML = `<div class="sheet">
     <div class="rhead">
       <div><h1>Decoded walk</h1><p class="mono">${ses.participant ? esc(ses.participant) + ' · ' : ''}${esc(room.name)} · ${fmt(ses.elapsed)} · steady looking ${steadyPct}% · ${ses.look.outside > 1 ? fmt(ses.look.outside) + ' outside · ' : ''}${ses.notes.length} remarks &nbsp;<span class="chip ${d.confidence}">${confLabel}</span>${saved ? '' : ' <span class="chip low">not saved: browser storage is blocked</span>'}</p></div>
-      <div class="controls"><button class="btn" id="r-copy">Copy data</button><button class="btn" id="r-dl">Download JSON</button><button class="btn" id="r-new">New walk</button><button class="btn signal" id="r-heat">Review heatmap in 3D</button><button class="btn primary" id="r-back">Keep walking</button></div>
+      <div class="controls"><a class="btn" href="egress.html" style="text-decoration:none">Egress study</a><button class="btn" id="r-copy">Copy data</button><button class="btn" id="r-dl">Download JSON</button><button class="btn" id="r-new">New walk</button><button class="btn signal" id="r-heat">Review heatmap in 3D</button><button class="btn primary" id="r-back">Keep walking</button></div>
     </div>
 
     <div class="rsec"><h2>Glass to specify <small>the answer, taken from the preferred glass's own metadata</small></h2>

@@ -134,8 +134,13 @@ async function boot() {
   nextFrame(frame);
 
   setupControls({ onNoteKey: () => $('#note').focus() });
-  // switching study mid-walk would lose the walk, so ask first
-  $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => { if (S.started && !confirm('Leave this walk for the egress study? It has not been decoded or saved.')) e.preventDefault(); }));
+  // switching study mid-walk would lose the walk: the first click asks, a second click within 3 s leaves
+  // (an inline prompt, because some browsers, including embedded ones, block confirm() pop-ups)
+  $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => {
+    if (!S.started || a.dataset.armed) return;
+    e.preventDefault(); a.dataset.armed = '1'; const label = a.textContent; a.textContent = 'Click again to leave';
+    setTimeout(() => { a.textContent = label; a.dataset.armed = ''; }, 3000);
+  }));
   setupPlatform({ onFinal: t => { if (S.started && !S.review) addNote(t, 'voice'); } });
   setupReport({ onNewWalk: showStart, onReview: enterReview });
   $('#m-obs').onclick = () => setSubject(false);

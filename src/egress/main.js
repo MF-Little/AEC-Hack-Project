@@ -283,8 +283,13 @@ async function boot() {
   $('#backreport').onclick = exitReview;
   $('#notebar').addEventListener('submit', e => { e.preventDefault(); const i = $('#note'); if (E.started && !E.done) addNote(i.value); i.value = ''; i.blur(); });
   $('#note').addEventListener('keydown', e => { if (e.key === 'Escape') e.target.blur(); });
-  // switching study mid-run would lose the run, so ask first
-  $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => { if (E.started && !E.done && !confirm('Leave this run for the glazing study? It has not finished and will not be saved.')) e.preventDefault(); }));
+  // switching study mid-run would lose the run: the first click asks, a second click within 3 s leaves
+  // (an inline prompt, because some browsers, including embedded ones, block confirm() pop-ups)
+  $$('.studies a:not([aria-current])').forEach(a => a.addEventListener('click', e => {
+    if (!(E.started && !E.done) || a.dataset.armed) return;
+    e.preventDefault(); a.dataset.armed = '1'; const label = a.textContent; a.textContent = 'Click again to leave';
+    setTimeout(() => { a.textContent = label; a.dataset.armed = ''; }, 3000);
+  }));
   $('#startform').addEventListener('submit', e => {
     e.preventDefault();
     if (!$('#consent').checked) { $('#consent').focus(); return; }
