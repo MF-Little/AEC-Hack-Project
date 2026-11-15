@@ -41,6 +41,10 @@ p { font-size: 32px; line-height: 1.35; margin: 0; color: var(--mute); }
 .cover .lede { font-size: 44px; line-height: 1.25; color: #E2DFD8; }
 .cover .eyebrow { color: #9FB0F0; }
 .cover .credit { position: absolute; left: 128px; bottom: 72px; width: 1100px; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: #C9C6BF; }
+.cover.minimal .cv { top: 0; bottom: 0; width: 1400px; justify-content: center; gap: 40px; }
+.cover.minimal h1 { font-size: 200px; }
+.cover.minimal .accent { width: 120px; height: 4px; background: #9FB0F0; }
+.cover.minimal .credit { color: #8E8B84; letter-spacing: 2px; }
 
 /* three statement cards */
 .cards3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
@@ -111,6 +115,21 @@ p { font-size: 32px; line-height: 1.35; margin: 0; color: var(--mute); }
 .row h3 { font-size: 40px; }
 .row p { font-size: 30px; }
 
+/* platform slide: heading beside a lead, two framed captures */
+.rhead { display: grid; grid-template-columns: 880px 1fr; gap: 56px; align-items: end; }
+.rhead p { font-size: 26px; line-height: 1.35; }
+.pair2 { display: grid; grid-template-columns: 816px 816px; gap: 32px; }
+.pair2 figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.pair2 .frame { padding: 12px; }
+.pair2 img { display: block; width: 788px; height: 462px; object-fit: cover; object-position: left top; }
+
+/* Rhino to the web: three framed captures in a row, numbered */
+.flow3 { display: grid; grid-template-columns: 473px 507px 620px; gap: 32px; align-items: start; }
+.flow3 figure { margin: 0; display: flex; flex-direction: column; gap: 20px; }
+.flow3 .frame { padding: 12px; }
+.flow3 img { display: block; height: 342px; object-fit: cover; }
+.flow3 .step p { text-wrap: balance; }
+
 /* screenshot slides: a framed capture beside a short column of points or numbers */
 .row2 { display: flex; gap: 56px; align-items: flex-start; }
 .frame { background: var(--card); border: 2px solid var(--rule); padding: 16px; box-sizing: border-box; flex: none; }
@@ -138,28 +157,15 @@ figure { margin: 0; }
 .vlt { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; line-height: 1.6; color: var(--ink); }
 </style>
 </head><body>
-<div class="slot"><div class="wrap"><section id="cover" class="cover" data-transition="fade">
-<img class="bg" src="images/facade-close.jpg" alt="The glazing study’s unitized curtain wall seen from the garden, with the Latin-furnished living room behind it">
-<div class="shade"></div>
+<div class="slot"><div class="wrap"><section id="cover" class="cover minimal" data-transition="fade">
 <div class="cv">
 <p class="eyebrow">AEC hackathon · glazing and life safety</p>
 <h1>Visual Vibes</h1>
+<div class="accent"></div>
 <p class="lede">Watch how people look at a building.<br>Specify what works for them.</p>
 </div>
-<p class="credit">Rendered live in the browser · every pane, mullion and sofa carries its own metadata</p>
+<p class="credit">Vision · Voice · Vibe</p>
 <aside>Visual Vibes turns how people look at and talk about a space into a glass specification. Everything on these slides comes from the working prototype: the renders are the app itself, and the numbers are from one recorded demo walk.</aside>
-</section>
-</div></div>
-<div class="slot"><div class="wrap"><section id="problem">
-<p class="eyebrow">The problem</p>
-<h2>The costliest facade choice<br>is made from renders.</h2>
-<div class="cards3">
-<div class="card"><p class="k">Today</p><p class="t">Glazing is picked from a render, a sample and the loudest voice in the meeting.</p></div>
-<div class="card"><p class="k">Missing</p><p class="t">Evidence of what future occupants actually look at, and what they say while looking.</p></div>
-<div class="card key"><p class="k">Visual Vibes</p><p class="t">A short first-person walk that ties every steady look and remark to the exact glass on show.</p></div>
-</div>
-<p class="foot">Visual Vibes · glazing study</p>
-<aside>Glass is expensive, long-lead and hard to change once installed, yet it is usually chosen from images and opinions. Visual Vibes adds behavioural evidence from the people who will use the space.</aside>
 </section>
 </div></div>
 <div class="slot"><div class="wrap"><section id="how">
@@ -327,6 +333,38 @@ figure { margin: 0; }
 </div>
 <p class="foot">Visual Vibes · glazing study · report</p>
 <aside>The schedule speaks the BIM team's language, so the result can go back into the model as parameters rather than as a slide.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="rhino">
+<p class="eyebrow">Any platform · Rhino 9 plug-in</p>
+<div class="rhead">
+<h2>Any platform you need.<br>We built it for Rhino.</h2>
+<p>The walk, the tagged metadata, the heat map and voice notes run as a native plug-in on the Rhino model itself. One more step toward a fully digital design process, with the data to make the best call for the client.</p>
+</div>
+<div class="pair2">
+<figure><div class="frame"><img src="images/rhino-heat.jpg" alt="Rhino 9 with the test room in the Perspective view, an attention heat map painted on the walls, floor and sofa, beside the Vision, Voice, Vibe window listing time on each tagged object and the event log"></div><figcaption class="cap">Heat map painted on the Rhino model</figcaption></figure>
+<figure><div class="frame"><img src="images/rhino-voice.jpg" alt="Rhino 9 looking at the W-02 ribbon window with its tag and heat, beside the Vision, Voice, Vibe window with voice on, the window's glass and frame spec, and a spoken note linked to W-02"></div><figcaption class="cap">Voice note linked to W-02 and its glass spec</figcaption></figure>
+</div>
+<p class="foot">Visual Vibes · Rhino 9 for Mac · screenshots from a live session</p>
+<aside>The engine isn't tied to the browser. As a Rhino 9 plug-in, the client walks the Rhino model with W A S D, the plug-in reads the camera ten times a second to see which tagged object is in view, voice notes are transcribed on the Mac and linked to what was on show, and Decode walk writes the same report as HTML and JSON. Tags are ordinary Rhino User Text, so any model can be tagged. Rhino is the first port: the same experience and its data can go to whatever platform a team designs in. It is part of one goal, getting the whole design process into digital form so every decision for the client is made with the data.</aside>
+</section>
+</div></div>
+<div class="slot"><div class="wrap"><section id="rhino-web">
+<p class="eyebrow">Rhino to the web app</p>
+<div class="rhead">
+<h2>Send a Rhino model up.<br>Walk it in the browser.</h2>
+<p>The plug-in also works the other way: objects from Rhino go up to the web app, where a client can pick them as a layout, walk them, and see exactly which ones held their attention.</p>
+</div>
+<div class="flow3">
+<figure><div class="frame"><img src="images/rhino-model.jpg" alt="A ring-shaped pavilion with four wall openings and a floating roof disc, modelled in Rhino's Perspective view" style="width:445px"></div>
+<figcaption class="step"><p class="n">01</p><div><h3>From Rhino</h3><p>Send the model’s objects up to the web app</p></div></figcaption></figure>
+<figure><div class="frame"><img src="images/web-layouts.jpg" alt="The web app's Choose a layout screen: 01 Original study, with the Glazing Study, Garden Apartment and Open Loft, or 02 Rhino geometry, the embedded model with navigation, dwell captures and a surface heat map" style="width:479px"></div>
+<figcaption class="step"><p class="n">02</p><div><h3>Pick a layout</h3><p>The original study or the Rhino geometry</p></div></figcaption></figure>
+<figure><div class="frame"><img src="images/web-rhino-observer.jpg" alt="The Rhino ring walked in the web app with heat cells on its surfaces, beside the Rhino model observer: the mesh being looked at, session time, captures, heat cells and an attention ranking of every mesh" style="width:592px"></div>
+<figcaption class="step"><p class="n">03</p><div><h3>Deep dive on any object</h3><p>Surface heat, and every object ranked by look time</p></div></figcaption></figure>
+</div>
+<p class="foot">Visual Vibes · Rhino geometry in the web app</p>
+<aside>The plug-in works in both directions. It sends a Rhino model's objects up to the web app (here as an embedded .glb), and the start screen offers it as a layout beside the original study: the Glazing Study, Garden Apartment and Open Loft. Walking it records centre-weighted attention, paints a heat map on the surfaces and ranks every object by look time, so you can dive into any single object. The session exports as JSON.</aside>
 </section>
 </div></div>
 <div class="slot"><div class="wrap"><section id="egress" class="cover" data-transition="fade">

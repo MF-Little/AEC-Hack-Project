@@ -29,6 +29,10 @@ p { font-size: 32px; line-height: 1.35; margin: 0; color: var(--mute); }
 .cover .lede { font-size: 44px; line-height: 1.25; color: #E2DFD8; }
 .cover .eyebrow { color: #9FB0F0; }
 .cover .credit { position: absolute; left: 128px; bottom: 72px; width: 1100px; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 24px; color: #C9C6BF; }
+.cover.minimal .cv { top: 0; bottom: 0; width: 1400px; justify-content: center; gap: 40px; }
+.cover.minimal h1 { font-size: 200px; }
+.cover.minimal .accent { width: 120px; height: 4px; background: #9FB0F0; }
+.cover.minimal .credit { color: #8E8B84; letter-spacing: 2px; }
 
 /* three statement cards */
 .cards3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
@@ -98,6 +102,21 @@ p { font-size: 32px; line-height: 1.35; margin: 0; color: var(--mute); }
 .row { display: grid; grid-template-columns: 520px 1fr; gap: 48px; padding: 30px 0; border-top: 2px solid var(--rule); align-items: baseline; }
 .row h3 { font-size: 40px; }
 .row p { font-size: 30px; }
+
+/* platform slide: heading beside a lead, two framed captures */
+.rhead { display: grid; grid-template-columns: 880px 1fr; gap: 56px; align-items: end; }
+.rhead p { font-size: 26px; line-height: 1.35; }
+.pair2 { display: grid; grid-template-columns: 816px 816px; gap: 32px; }
+.pair2 figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.pair2 .frame { padding: 12px; }
+.pair2 img { display: block; width: 788px; height: 462px; object-fit: cover; object-position: left top; }
+
+/* Rhino to the web: three framed captures in a row, numbered */
+.flow3 { display: grid; grid-template-columns: 473px 507px 620px; gap: 32px; align-items: start; }
+.flow3 figure { margin: 0; display: flex; flex-direction: column; gap: 20px; }
+.flow3 .frame { padding: 12px; }
+.flow3 img { display: block; height: 342px; object-fit: cover; }
+.flow3 .step p { text-wrap: balance; }
 
 /* screenshot slides: a framed capture beside a short column of points or numbers */
 .row2 { display: flex; gap: 56px; align-items: flex-start; }

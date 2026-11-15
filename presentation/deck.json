@@ -15,7 +15,6 @@
  "cover": "cover",
  "order": [
   "cover",
-  "problem",
   "how",
   "variable",
   "metadata",
@@ -27,6 +26,8 @@
   "facade",
   "remarks",
   "schedule",
+  "rhino",
+  "rhino-web",
   "egress",
   "egress-setup",
   "egress-pressure",
@@ -42,8 +43,8 @@
    "start": "cover"
   },
   "s2": {
-   "description": "The problem and how it works",
-   "start": "problem"
+   "description": "How it works",
+   "start": "how"
   },
   "s3": {
    "description": "The test and the metadata behind it",
@@ -54,10 +55,14 @@
    "start": "result"
   },
   "s5": {
+   "description": "Any platform: the Rhino 9 plug-in, and Rhino models in the web app",
+   "start": "rhino"
+  },
+  "s6": {
    "description": "Second study: factory egress and life safety",
    "start": "egress"
   },
-  "s6": {
+  "s7": {
    "description": "Where it goes next",
    "start": "next"
   }
