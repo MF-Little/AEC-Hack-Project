@@ -145,9 +145,9 @@ export function startAlarm() {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume();
     const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), f = ac.createBiquadFilter(), g = ac.createGain();
     o.type = 'square'; o.frequency.value = 885; lfo.type = 'square'; lfo.frequency.value = 1; lg.gain.value = 85;
-    f.type = 'lowpass'; f.frequency.value = 2200; g.gain.value = 0;
+    f.type = 'lowpass'; f.frequency.value = 3200; g.gain.value = 0;
     lfo.connect(lg); lg.connect(o.frequency); o.connect(f); f.connect(g); g.connect(ac.destination);
-    o.start(); lfo.start(); g.gain.linearRampToValueAtTime(0.035, ac.currentTime + 0.4);
+    o.start(); lfo.start(); g.gain.linearRampToValueAtTime(0.14, ac.currentTime + 0.4);   // loud enough to carry on laptop speakers
     alarmNodes = { o, lfo, g };
   } catch (e) { alarmNodes = null; }
 }
